@@ -1,13 +1,14 @@
 {
-  "name": "backend",
+  "name": "webapi",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "backend nodejs website",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon --exec ./node_modules/.bin/babel-node src/server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "huongpham01",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
