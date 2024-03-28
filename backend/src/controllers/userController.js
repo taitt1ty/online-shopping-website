@@ -1,15 +1,14 @@
 import userService from '../services/userService';
+const { errorResponse } = require('../utils/ResponseUtils');
+
 
 const handleRequest = async (handler, req, res) => {
     try {
         const data = await handler(req.body);
-        return res.status(200).json(data);
+        return res.status(success).json(data);
     } catch (error) {
         console.log(error);
-        return res.status(200).json({
-            errCode: -1,
-            errMessage: 'Error from server'
-        });
+        return errorResponse();
     }
 };
 
