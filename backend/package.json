@@ -1,5 +1,5 @@
 {
-  "name": "webapi",
+  "name": "backend",
   "version": "1.0.0",
   "description": "backend nodejs website",
   "main": "server.js",

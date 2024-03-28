@@ -1,12 +1,25 @@
 import express from "express";
 import connectDB from "./config/connectDB";
+import bodyParser from "body-parser";
 import http from 'http';
+import initwebRoutes from "./route/web";
 require('dotenv').config();
-let app = express();
 
+const app = express();
+const port = process.env.PORT || 8888;
+
+// Connect to DB
+connectDB();
+
+// Use middleware to process JSON data and x-www-form-urlencoded requests
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Initialize routes
+initwebRoutes(app);
+
+// Create a server and listen on the specified port
 const server = http.createServer(app);
-let port = process.env.PORT || 8888;
-
 server.listen(port, () => {
-    console.log("Backend Nodejs is running on the port: " + port)
+    console.log(`Backend Nodejs is running on port: ${port}`);
 });
