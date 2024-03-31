@@ -1,32 +1,77 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
+      // Define associations here
     }
   }
-  User.init({
-    email: DataTypes.STRING,
-    password: DataTypes.STRING,
-    fullName: DataTypes.STRING,
-    address: DataTypes.STRING,
-    phoneNumber: DataTypes.STRING,
-    image: DataTypes.BLOB('long'),
-    dob: DataTypes.STRING,
-    isActivePhone: DataTypes.BOOLEAN,
-    roleId: DataTypes.STRING,
-    statusId: DataTypes.STRING,
-    userToken: DataTypes.STRING,
-  }, {
-    sequelize,
-    modelName: 'User',
-  });
+
+  User.init(
+    {
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+          isEmail: true,
+        },
+      },
+      password: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          isStrongPassword(value) {
+            if (
+              !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}/.test(
+                value
+              )
+            ) {
+              throw new Error(
+                "Password must contain at least 8 characters, including at least one uppercase letter, one lowercase letter, one number, and one special character"
+              );
+            }
+          },
+        },
+      },
+      fullName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
+      },
+      address: DataTypes.STRING,
+      phoneNumber: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+          isPhoneNumber(value) {
+            if (!/^(0[2-9][0-9]{8}|[2-9][0-9]{8})$/.test(value)) {
+              throw new Error("Invalid phone number format");
+            }
+          },
+        },
+      },
+      image: DataTypes.BLOB("long"),
+      dob: {
+        type: DataTypes.STRING,
+        validate: {
+          isDate: true,
+        },
+      },
+      isActivePhone: DataTypes.BOOLEAN,
+      roleId: DataTypes.STRING,
+      statusId: DataTypes.STRING,
+      userToken: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "User",
+    }
+  );
+
   return User;
 };
