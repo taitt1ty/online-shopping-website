@@ -1,20 +1,28 @@
-import express from 'express';
-import userController from '../controllers/userController';
-import middlewareController from '../middlewares/jwtVerify'
-let router = express.Router();
+import express from "express";
+import userController from "../controllers/userController";
+import middlewareController from "../middlewares/jwtVerify";
 
-let initwebRoutes = (app) => {
-    router.get("/", (req, res) => {
-        return res.send("...")
-    })
-    //----------------------------API USER-----------------------//
-    router.post('/api/register', userController.handleCreateNewUser)
-    router.put('/api/update-user', middlewareController.verifyTokenUser, userController.handleUpdateUser)
-    router.delete('/api/delete-user', userController.handleDeleteUser)
-    router.post('/api/login', userController.handleLogin)
-    router.get('/api/get-all-user', userController.getAllUser)
-    router.get('/api/get-user-by-id', userController.getUserById)
-    return app.use("/", router)
-}
+const initwebRoutes = (app) => {
+  const router = express.Router();
+  //-----------------------------------------------API USER------------------------------------------//
+  router.post("/api/user/register", userController.registerUser);
+  router.post("/api/user/login", userController.loginUser);
+  router.put(
+    "/api/user/update",
+    middlewareController.verifyTokenUser,
+    userController.updateUser
+  );
+  router.delete("/api/user/delete", userController.deleteUser);
+  router.get("/api/user/all", userController.getAllUser);
+  router.get("/api/user/:id", userController.getUserById);
+  router.post(
+    "/api/user/change-password",
+    middlewareController.verifyTokenUser,
+    userController.changePassword
+  );
+
+  // Use the router for all routes
+  app.use("/", router);
+};
 
 module.exports = initwebRoutes;

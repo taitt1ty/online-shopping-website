@@ -5,6 +5,7 @@ import {
   successResponse,
   errorResponse,
   missingRequiredParams,
+  userNotExist,
 } from "../utils/ResponseUtils";
 
 require("dotenv").config();
@@ -20,7 +21,7 @@ const checkUserPhoneNumber = async (userPhoneNumber) => {
   return !!user;
 };
 
-const handleCreateNewUser = async (data) => {
+const registerUser = async (data) => {
   try {
     if (!data.phoneNumber) {
       return missingRequiredParams("phoneNumber");
@@ -28,7 +29,7 @@ const handleCreateNewUser = async (data) => {
 
     const isExist = await checkUserPhoneNumber(data.phoneNumber);
     if (isExist) {
-      return userExistsError();
+      return userNotExist();
     }
 
     const hashPassword = await hashUserPassword(data.password);
@@ -46,9 +47,43 @@ const handleCreateNewUser = async (data) => {
       userToken: "",
     });
 
-    return successResponse();
+    return successResponse("User registration");
   } catch (error) {
     console.log(error);
+    return errorResponse();
+  }
+};
+
+const loginUser = async (data) => {
+  try {
+    if (!data.phoneNumber || !data.password) {
+      return missingRequiredParams("phoneNumber or password");
+    }
+    const isExist = await checkUserPhoneNumber(data.phoneNumber);
+    if (!isExist) {
+      return userNotExist();
+    }
+    const user = await db.User.findOne({
+      attributes: ["email", "roleId", "password", "fullName", "id"],
+      where: { phoneNumber: data.phoneNumber, statusId: "S1" },
+    });
+
+    if (!user) {
+      return userNotExist();
+    }
+    let check = await bcrypt.compare(data.password, user.password);
+    if (!check) {
+      return {
+        errCode: 3,
+        errMessage: "Wrong password!",
+      };
+    }
+    // Delete password before return information of user
+    delete user.password;
+    const accessToken = CommonUtils.encodeToken(user.id);
+    return successResponse({ user, accessToken });
+  } catch (error) {
+    console.error("Error in login:", error);
     return errorResponse();
   }
 };
@@ -60,12 +95,12 @@ const deleteUser = async (userId) => {
     }
     const foundUser = await db.User.findOne({ where: { id: userId } });
     if (!foundUser) {
-      return userNotExistError();
+      return userNotExist();
     }
 
     await db.User.destroy({ where: { id: userId } });
 
-    return successResponse("Đã xóa người dùng");
+    return successResponse("Deleted user");
   } catch (error) {
     console.log(error);
     return errorResponse();
@@ -80,7 +115,7 @@ const updateUser = async (data) => {
 
     let user = await db.User.findOne({ where: { id: data.id } });
     if (!user) {
-      return userNotExistError();
+      return userNotExist();
     }
 
     user.fullName = data.fullName;
@@ -94,49 +129,7 @@ const updateUser = async (data) => {
 
     await user.save();
 
-    return successResponse("Cập nhật người dùng thành công!");
-  } catch (error) {
-    console.log(error);
-    return errorResponse();
-  }
-};
-
-const handleLogin = async (data) => {
-  try {
-    if (!data.phoneNumber || !data.password) {
-      return missingRequiredParams("phoneNumber or password");
-    }
-
-    let userData = {};
-    let isExist = await checkUserPhoneNumber(data.phoneNumber);
-    if (!isExist) {
-      return userNotExistError();
-    }
-
-    let user = await db.User.findOne({
-      attributes: ["email", "roleId", "password", "fullName", "id"],
-      where: { phoneNumber: data.phoneNumber, statusId: "S1" },
-    });
-    if (!user) {
-      return userNotExistError();
-    }
-
-    let check = bcrypt.compareSync(data.password, user.password);
-    if (!check) {
-      return {
-        errCode: 3,
-        errMessage: "Sai mật khẩu",
-      };
-    }
-
-    delete user.password;
-    userData.errCode = 0;
-    userData.errMessage = "OK";
-    userData.user = user;
-    //import CommonUtil to use encodeToken
-    userData.accessToken = CommonUtils.encodeToken(user.id);
-
-    return userData;
+    return successResponse("Updated user");
   } catch (error) {
     console.log(error);
     return errorResponse();
@@ -146,12 +139,12 @@ const handleLogin = async (data) => {
 const getAllUser = async (data) => {
   try {
     let objectFilter = {
-      where: { status_id: "S1" },
+      where: { statusId: "S1" },
       attributes: {
         exclude: ["password", "image"],
       },
       include: [
-        { model: db.AllCode, as: "role_data", attributes: ["value", "code"] },
+        { model: db.AllCode, as: "roleData", attributes: ["value", "code"] },
       ],
       raw: true,
       nest: true,
@@ -173,35 +166,69 @@ const getUserById = async (userId) => {
       return missingRequiredParams("userId");
     }
 
-    let res = await db.User.findOne({
+    let user = await db.User.findOne({
       where: { id: userId, statusId: "S1" },
-      attributes: {
-        exclude: ["password"],
-      },
+      attributes: { exclude: ["password"] },
       include: [
         { model: db.AllCode, as: "roleData", attributes: ["value", "code"] },
       ],
-      raw: true,
-      nest: true,
     });
 
-    if (res.image) {
-      res.image = new Buffer(res.image, "base64").toString("binary");
+    if (!user) {
+      return userNotExist();
     }
 
-    return successResponse(res);
+    if (user.image) {
+      user.image = new Buffer(user.image, "base64").toString("binary");
+    }
+
+    return successResponse(user);
   } catch (error) {
-    console.log(error);
+    console.error("Error in getUserById:", error);
+    return errorResponse();
+  }
+};
+
+const changePassword = async (data) => {
+  try {
+    if (!data.id || !data.password || !data.oldpassword) {
+      return missingRequiredParams("id, password, or oldpassword");
+    }
+
+    let user = await db.User.findOne({
+      where: { id: data.id },
+      raw: false,
+    });
+
+    if (!user) {
+      return userNotExist();
+    }
+
+    const isMatch = await bcrypt.compare(data.oldpassword, user.password);
+    if (!isMatch) {
+      return {
+        errCode: 2,
+        errMessage: "Old password is wrong!",
+      };
+    }
+
+    user.password = await hashUserPassword(data.password);
+    await user.save();
+
+    return successResponse("Change password");
+  } catch (error) {
+    console.error("Error in changePassword:", error);
     return errorResponse();
   }
 };
 
 module.exports = {
-  handleCreateNewUser: handleCreateNewUser,
-  deleteUser: deleteUser,
-  updateUser: updateUser,
-  handleLogin: handleLogin,
-  getAllUser: getAllUser,
-  getUserById: getUserById,
-  checkUserPhoneNumber: checkUserPhoneNumber,
+  registerUser,
+  loginUser,
+  deleteUser,
+  updateUser,
+  getAllUser,
+  getUserById,
+  checkUserPhoneNumber,
+  changePassword,
 };
