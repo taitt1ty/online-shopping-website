@@ -74,14 +74,18 @@ const loginUser = async (data) => {
     let check = await bcrypt.compare(data.password, user.password);
     if (!check) {
       return {
-        errCode: 3,
+        statusCode: 401,
         errMessage: "Wrong password!",
       };
     }
     // Delete password before return information of user
     delete user.password;
     const accessToken = CommonUtils.encodeToken(user.id);
-    return successResponse({ user, accessToken });
+    return {
+      errCode: 200,
+      errMessage: "Login successful",
+      accessToken: accessToken,
+    };
   } catch (error) {
     console.error("Error in login:", error);
     return errorResponse();

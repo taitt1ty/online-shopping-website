@@ -4,8 +4,12 @@ const { errorResponse, successResponse } = require("../utils/ResponseUtils");
 const handleRequest = async (handler, req, res) => {
   try {
     const data = await handler(req.body);
-    // Returns the HTTP response
-    return res.status(data.statusCode).json(data); 
+    if (!data) {
+      // Handle case when no response data is returned
+      return res.status(500).json(errorResponse());
+    }
+    const statusCode = data.errCode === 0 ? 200 : 500;
+    return res.status(statusCode).json(data);
   } catch (error) {
     console.log(error);
     return res.status(500).json(errorResponse());

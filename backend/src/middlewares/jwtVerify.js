@@ -1,6 +1,10 @@
 const jwt = require("jsonwebtoken");
 const db = require("../models");
-const { errorResponse, userNotExist, notValid } = require("../utils/ResponseUtils");
+const {
+  errorResponse,
+  userNotExist,
+  notValid,
+} = require("../utils/ResponseUtils");
 require("dotenv").config();
 
 const secretString = process.env.JWT_SECRET;
@@ -8,20 +12,12 @@ const secretString = process.env.JWT_SECRET;
 const middlewareController = {
   verifyTokenUser: async (req, res, next) => {
     try {
-      // Check if the Authorization header exists
       const token = req.headers.authorization;
       if (!token) {
-        return res.status(401).json({
-          status: false,
-          message: "You're not authenticated!",
-          refresh: true,
-        });
+        return errorAuth(res);
       }
-      // Separate token from Authorization header
       const accessToken = token.split(" ")[1];
-      // Verify the token
       const payload = jwt.verify(accessToken, secretString);
-      // Search for users in the database using the id from the payload
       const user = await db.User.findOne({ where: { id: payload.sub } });
       if (!user) {
         return userNotExist(res);
@@ -36,6 +32,34 @@ const middlewareController = {
       }
       console.error("Middleware Error:", error);
       return errorResponse(res);
+    }
+  },
+  verifyTokenAdmin: (req, res, next) => {
+    const token = req.headers.authorization;
+    if (token) {
+      const accessToken = token.split(" ")[1];
+
+      jwt.verify(accessToken, secretString, async (err, payload) => {
+        if (err) {
+          return notValid(res, "Token");
+        }
+        const user = await db.User.findOne({ where: { id: payload.sub } });
+        if (!user) {
+          return userNotExist(res);
+        }
+        if (user && (user.roleId == "R4" || user.roleId == "R1")) {
+          req.user = user;
+          next();
+        } else {
+          return res.status(404).json({
+            status: false,
+            errMessage: "You do not have sufficient rights!",
+            refresh: true,
+          });
+        }
+      });
+    } else {
+      return errorAuth(res);
     }
   },
 };

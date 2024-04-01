@@ -12,8 +12,8 @@ const initwebRoutes = (app) => {
     middlewareController.verifyTokenUser,
     userController.updateUser
   );
-  router.delete("/api/user/delete", userController.deleteUser);
-  router.get("/api/user/all", userController.getAllUser);
+  router.delete("/api/user/delete", middlewareController.verifyTokenAdmin, userController.deleteUser);
+  router.get("/api/user/all", middlewareController.verifyTokenAdmin, userController.getAllUser);
   router.get("/api/user/:id", userController.getUserById);
   router.post(
     "/api/user/change-password",
