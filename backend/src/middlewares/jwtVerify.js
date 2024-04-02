@@ -8,6 +8,7 @@ const {
 require("dotenv").config();
 
 const secretString = process.env.JWT_SECRET;
+const accessTokenExpiresIn = "1h";
 
 const middlewareController = {
   verifyTokenUser: async (req, res, next) => {
@@ -18,6 +19,10 @@ const middlewareController = {
       }
       const accessToken = token.split(" ")[1];
       const payload = jwt.verify(accessToken, secretString);
+      // Check accessToken exoiration time
+      if (payload.exp && Date.now() >= payload.exp * 1000) {
+        return notValid(res, "Token");
+      }
       const user = await db.User.findOne({ where: { id: payload.sub } });
       if (!user) {
         return userNotExist(res);
@@ -41,6 +46,10 @@ const middlewareController = {
 
       jwt.verify(accessToken, secretString, async (err, payload) => {
         if (err) {
+          return notValid(res, "Token");
+        }
+        // Check accessToken expiration time
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
           return notValid(res, "Token");
         }
         const user = await db.User.findOne({ where: { id: payload.sub } });

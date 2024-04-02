@@ -82,9 +82,9 @@ const loginUser = async (data) => {
     delete user.password;
     const accessToken = CommonUtils.encodeToken(user.id);
     return {
+      result: accessToken,
       errCode: 200,
       errMessage: "Login successful",
-      accessToken: accessToken,
     };
   } catch (error) {
     console.error("Error in login:", error);
