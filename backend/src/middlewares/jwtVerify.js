@@ -19,7 +19,7 @@ const middlewareController = {
       }
       const accessToken = token.split(" ")[1];
       const payload = jwt.verify(accessToken, secretString);
-      // Check accessToken exoiration time
+      // Check accessToken expiration time
       if (payload.exp && Date.now() >= payload.exp * 1000) {
         return notValid(res, "Token");
       }
@@ -43,7 +43,6 @@ const middlewareController = {
     const token = req.headers.authorization;
     if (token) {
       const accessToken = token.split(" ")[1];
-
       jwt.verify(accessToken, secretString, async (err, payload) => {
         if (err) {
           return notValid(res, "Token");
