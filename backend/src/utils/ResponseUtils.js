@@ -1,5 +1,5 @@
 const success = 200;
-const errors = [500, 400, 404, 403, 401];
+const errors = [500, 400, 404, 403];
 //500: Internal Server Error
 //400: Bad Request, used when the request is invalid from the client.
 //404: Not Found
@@ -13,8 +13,8 @@ const respFunction = (result, statusCode, errMessage) => {
   };
 };
 
-const errorResponse = () => {
-  return respFunction([], errors[0], "Internal server error!");
+const errorResponse = (fieldName) => {
+  return respFunction([], errors[0], `${fieldName}`);
 };
 
 const missingRequiredParams = (fieldName) => {
@@ -30,11 +30,7 @@ const notValid = (fieldName) => {
 };
 
 const successResponse = (fieldName) => {
-  return respFunction([], success, "Success");
-};
-
-const errorAuth = () => {
-  return respFunction([], errors[4], "You're not authentication!");
+  return respFunction([], success, `${fieldName} is successful!`);
 };
 
 module.exports = {
@@ -44,5 +40,4 @@ module.exports = {
   userNotExist,
   notValid,
   successResponse,
-  errorAuth,
 };

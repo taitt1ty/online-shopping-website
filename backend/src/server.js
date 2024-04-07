@@ -2,7 +2,7 @@ import express from "express";
 import connectDB from "./config/connectDB";
 import bodyParser from "body-parser";
 import http from "http";
-import initwebRoutes from "./route/web";
+import webRoutes from "./route/web";
 require("dotenv").config();
 
 const app = express();
@@ -16,7 +16,7 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 // Initialize routes
-initwebRoutes(app);
+webRoutes(app);
 
 // Create a server and listen on the specified port
 const server = http.createServer(app);

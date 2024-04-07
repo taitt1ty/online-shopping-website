@@ -1,75 +1,87 @@
 const jwt = require("jsonwebtoken");
-const db = require("../models");
-const {
+import db from "../models/index";
+import {
   errorResponse,
   userNotExist,
   notValid,
-} = require("../utils/ResponseUtils");
+} from "../utils/ResponseUtils";
 require("dotenv").config();
-
 const secretString = process.env.JWT_SECRET;
-const accessTokenExpiresIn = "1h";
+const refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
 
-const middlewareController = {
-  verifyTokenUser: async (req, res, next) => {
-    try {
-      const token = req.headers.authorization;
-      if (!token) {
-        return errorAuth(res);
-      }
-      const accessToken = token.split(" ")[1];
-      const payload = jwt.verify(accessToken, secretString);
-      // Check accessToken expiration time
-      if (payload.exp && Date.now() >= payload.exp * 1000) {
-        return notValid(res, "Token");
+const middlewareControllers = {
+  verifyTokenUser: (req, res, next) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+      return res.status(403).json(notValid("Token"));
+    }
+
+    const accessToken = token.split(" ")[1];
+
+    jwt.verify(accessToken, secretString, async (err, payload) => {
+      if (err) {
+        return res.status(403).json(notValid("Token"));
       }
       const user = await db.User.findOne({ where: { id: payload.sub } });
       if (!user) {
-        return userNotExist(res);
+        return res.status(404).json(userNotExist());
       }
-      // Attach the user to req.user and continue processing the next middleware
+
       req.user = user;
       next();
-    } catch (error) {
-      // Handle errors
-      if (error.name === "JsonWebTokenError") {
-        return notValid(res, "Token");
-      }
-      console.error("Middleware Error:", error);
-      return errorResponse(res);
-    }
+    });
   },
+
   verifyTokenAdmin: (req, res, next) => {
     const token = req.headers.authorization;
-    if (token) {
-      const accessToken = token.split(" ")[1];
-      jwt.verify(accessToken, secretString, async (err, payload) => {
-        if (err) {
-          return notValid(res, "Token");
-        }
-        // Check accessToken expiration time
-        if (payload.exp && Date.now() >= payload.exp * 1000) {
-          return notValid(res, "Token");
-        }
-        const user = await db.User.findOne({ where: { id: payload.sub } });
-        if (!user) {
-          return userNotExist(res);
-        }
-        if (user && (user.roleId == "R4" || user.roleId == "R1")) {
-          req.user = user;
-          next();
-        } else {
-          return res.status(404).json({
-            status: false,
-            errMessage: "You do not have sufficient rights!",
-            refresh: true,
-          });
-        }
-      });
-    } else {
-      return errorAuth(res);
+
+    if (!token) {
+      return res.status(403).json(notValid("Token"));
     }
+
+    const accessToken = token.split(" ")[1];
+
+    jwt.verify(accessToken, secretString, async (err, payload) => {
+      if (err) {
+        return res.status(403).json(notValid("Token"));
+      }
+      const user = await db.User.findOne({ where: { id: payload.sub } });
+      if (!user) {
+        return res.status(404).json(userNotExist());
+      }
+      if (user && (user.roleId == "R4" || user.roleId == "R1")) {
+        req.user = user;
+        next();
+      } else {
+        return res.status(403).json(errorResponse("Bạn không có đủ quyền"));
+      }
+    });
+  },
+
+  refreshToken: (req, res) => {
+    const refreshToken = req.body.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(400).json(errorResponse("Refresh token is missing"));
+    }
+
+    jwt.verify(refreshToken, refreshTokenSecret, async (err, payload) => {
+      if (err) {
+        return res.status(401).json(notValid("Refresh token"));
+      }
+      const user = await db.User.findOne({ where: { id: payload.sub } });
+      if (!user) {
+        return res.status(404).json(userNotExist());
+      }
+      const accessToken = jwt.sign(
+        { id: user.id, email: user.email },
+        secretString,
+        { expiresIn: "1h" }
+      );
+      res.json({ accessToken: accessToken });
+    });
   },
 };
 
-module.exports = middlewareController;
+module.exports = middlewareControllers;

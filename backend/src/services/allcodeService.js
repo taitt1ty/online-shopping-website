@@ -25,10 +25,10 @@ const createNewCode = async (data) => {
         value: data.value,
         code: data.code,
       });
-      return successResponse("Success");
+      return successResponse("Create new code");
     }
   } catch (error) {
-    console.error("Error in handleCreateNewAllCode:", error);
+    console.error("Error in create new code:", error);
     return errorResponse();
   }
 };

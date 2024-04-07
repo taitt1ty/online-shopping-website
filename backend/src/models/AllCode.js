@@ -9,6 +9,22 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       AllCode.hasMany(models.User, { foreignKey: "roleId", as: "roleData" });
+      AllCode.hasMany(models.Product, {
+        foreignKey: "categoryId",
+        as: "categoryData",
+      });
+      AllCode.hasMany(models.Product, {
+        foreignKey: "brandId",
+        as: "brandData",
+      });
+      AllCode.hasMany(models.Product, {
+        foreignKey: "statusId",
+        as: "statusData",
+      });
+      AllCode.hasMany(models.ProductSize, {
+        foreignKey: "sizeId",
+        as: "sizeData",
+      });
     }
   }
   AllCode.init(

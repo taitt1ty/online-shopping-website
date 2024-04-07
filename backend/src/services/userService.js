@@ -29,7 +29,7 @@ const registerUser = async (data) => {
 
     const isExist = await checkUserPhoneNumber(data.phoneNumber);
     if (isExist) {
-      return userNotExist();
+      return errorResponse(`User already exists`);
     }
 
     const hashPassword = await hashUserPassword(data.password);
