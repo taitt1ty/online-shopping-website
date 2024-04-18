@@ -14,11 +14,11 @@ module.exports = (sequelize, DataTypes) => {
         targetKey: "code",
         as: "brandData",
       }),
-      Product.belongsTo(models.AllCode, {
-        foreignKey: "statusId",
-        targetKey: "code",
-        as: "statusData",
-      });
+        Product.belongsTo(models.AllCode, {
+          foreignKey: "statusId",
+          targetKey: "code",
+          as: "statusData",
+        });
       Product.hasMany(models.ProductDetail, {
         foreignKey: "productId",
         as: "productDetailData",
@@ -37,6 +37,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Product",
+      tableName: "products",
     }
   );
   return Product;

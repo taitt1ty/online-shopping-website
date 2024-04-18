@@ -44,7 +44,7 @@ const getUserById = async (req, res) => {
   return handleRequest(userService.getUserById, req, res);
 };
 
-const checkPhoneNumber = async (req, res) => {
+const checkUserPhoneNumber = async (req, res) => {
   return handleRequest(userService.checkPhoneNumber, req, res);
 };
 
@@ -55,6 +55,6 @@ module.exports = {
   deleteUser,
   getAllUser,
   getUserById,
-  checkPhoneNumber,
+  checkUserPhoneNumber,
   changePassword,
 };

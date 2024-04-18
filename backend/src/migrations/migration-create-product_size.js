@@ -21,7 +21,7 @@ module.exports = {
         type: Sequelize.STRING,
       },
       sizeId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,

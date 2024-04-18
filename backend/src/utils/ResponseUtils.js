@@ -21,8 +21,8 @@ const missingRequiredParams = (fieldName) => {
   return respFunction([], errors[1], `${fieldName} is required!`);
 };
 
-const userNotExist = () => {
-  return respFunction([], errors[2], `User doesn't exist!`);
+const notFound = (fieldName) => {
+  return respFunction([], errors[2], `${fieldName} not found!`);
 };
 
 const notValid = (fieldName) => {
@@ -30,14 +30,13 @@ const notValid = (fieldName) => {
 };
 
 const successResponse = (fieldName) => {
-  return respFunction([], success, `${fieldName} is successful!`);
+  return respFunction([], success, `${fieldName} successfully!`);
 };
 
 module.exports = {
-  respFunction,
   errorResponse,
   missingRequiredParams,
-  userNotExist,
+  notFound,
   notValid,
   successResponse,
 };

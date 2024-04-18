@@ -137,7 +137,7 @@ const getListCode = async (data) => {
   }
 };
 
-module.exports = {
+export default {
   createNewCode,
   getAllCode,
   updateCode,

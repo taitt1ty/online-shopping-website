@@ -12,14 +12,14 @@ module.exports = (sequelize, DataTypes) => {
       ProductImage.belongsTo(models.ProductDetail, {
         foreignKey: "productDetailId",
         targetKey: "id",
-        as: "productImageData",
+        as: "productDetailData",
       });
     }
   }
   ProductImage.init(
     {
       productDetailId: DataTypes.INTEGER,
-      image: DataTypes.TEXT("long"),
+      image: DataTypes.STRING,
     },
     {
       sequelize,

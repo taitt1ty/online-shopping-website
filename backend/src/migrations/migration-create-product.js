@@ -18,16 +18,16 @@ module.exports = {
         type: Sequelize.TEXT("long"),
       },
       statusId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
       },
       categoryId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
       },
       view: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
       },
       brandId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,

@@ -12,11 +12,15 @@ module.exports = (sequelize, DataTypes) => {
       ProductDetail.belongsTo(models.Product, {
         foreignKey: "productId",
         targetKey: "id",
-        as: "productDetailData",
+        as: "productData",
       });
       ProductDetail.hasMany(models.ProductImage, {
         foreignKey: "productDetailId",
         as: "productImageData",
+      });
+      ProductDetail.hasMany(models.ProductSize, {
+        foreignKey: "productDetailId",
+        as: "productSizeData",
       });
     }
   }

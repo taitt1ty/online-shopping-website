@@ -17,51 +17,152 @@ const handleRequest = async (handler, req, res) => {
   }
 };
 
-const handlers = {
-  // PRODUCT
-  createProduct: productService.createProduct,
-  getAllProductAdmin: productService.getAllProductAdmin,
-  getAllProductUser: productService.getAllProductUser,
-  getProductById: productService.getProductById,
-  unActiveProduct: productService.unActiveProduct,
-  activeProduct: productService.activeProduct,
-  updateProduct: productService.updateProduct,
-
-  // PRODUCT DETAIL
-  createProductDetail: productService.createProductDetail,
-  getAllProductDetail: productService.getAllProductDetail,
-  getProductDetailById: productService.getProductDetailById,
-  updateProductDetail: productService.updateProductDetail,
-  deleteProductDetail: productService.deleteProductDetail,
-  
-  // PRODUCT IMAGE
-  createProductImage: productService.createProductImage,
-  getAllProductImage: productService.getAllProductImage,
-  getProductImageById: productService.getProductImageById,
-  updateProductImage: productService.updateProductImage,
-  deleteProductImage: productService.deleteProductImage,
-
-  // PRODUCT SIZE
-  createProductSize: productService.createProductSize,
-  getAllProductSize: productService.getAllProductSize,
-  getProductSizeById: productService.getProductSizeById,
-  updateProductSize: productService.updateProductSize,
-  deleteProductSize: productService.deleteProductSize,
-
-  getProductFeature: productService.getProductFeature,
-  getProductNew: productService.getProductNew,
-  //   getProductShopCart: productService.getProductShopCart,
-  //   getProductRecommend: productService.getProductRecommend,
+// PRODUCT
+const createProduct = async (req, res) => {
+  await handleRequest(productService.createProduct, req, res);
 };
 
-// Loop through handlers and wrap each handler with handleRequest
-for (const handlerName in handlers) {
-  if (Object.hasOwnProperty.call(handlers, handlerName)) {
-    const handler = handlers[handlerName];
-    handlers[handlerName] = async (req, res) => {
-      await handleRequest(handler, req, res);
-    };
+const getAllProductAdmin = async (req, res) => {
+  try {
+    const data = await productService.getAllProductAdmin(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("Error retrieving products:", error);
+    return res.status(500).json(errorResponse("Internal server error"));
   }
-}
+};
 
-module.exports = handlers;
+const getAllProductUser = async (req, res) => {
+  try {
+    const data = await productService.getAllProductUser(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("Error retrieving products:", error);
+    return res.status(500).json(errorResponse("Internal server error"));
+  }
+};
+
+const getProductById = async (req, res) => {
+  await handleRequest(
+    async (data) => {
+      const product = await productService.getProductById(data.id);
+      if (!product.result) {
+        return errorResponse("Product not found");
+      }
+      return product;
+    },
+    req,
+    res
+  );
+};
+
+const unActiveProduct = async (req, res) => {
+  await handleRequest(productService.unActiveProduct, req, res);
+};
+
+const activeProduct = async (req, res) => {
+  await handleRequest(productService.activeProduct, req, res);
+};
+
+const updateProduct = async (req, res) => {
+  await handleRequest(productService.updateProduct, req, res);
+};
+
+// PRODUCT DETAIL
+const createProductDetail = async (req, res) => {
+  await handleRequest(productService.createProductDetail, req, res);
+};
+
+const getAllProductDetail = async (req, res) => {
+  await handleRequest(productService.getAllProductDetail, req, res);
+};
+
+const getProductDetailById = async (req, res) => {
+  await handleRequest(productService.getProductDetailById, req, res);
+};
+
+const updateProductDetail = async (req, res) => {
+  await handleRequest(productService.updateProductDetail, req, res);
+};
+
+const deleteProductDetail = async (req, res) => {
+  await handleRequest(productService.deleteProductDetail, req, res);
+};
+
+// PRODUCT IMAGE
+const createProductImage = async (req, res) => {
+  await handleRequest(productService.createProductImage, req, res);
+};
+
+const getAllProductImage = async (req, res) => {
+  await handleRequest(productService.getAllProductImage, req, res);
+};
+
+const getProductImageById = async (req, res) => {
+  await handleRequest(productService.getProductImageById, req, res);
+};
+
+const updateProductImage = async (req, res) => {
+  await handleRequest(productService.updateProductImage, req, res);
+};
+
+const deleteProductImage = async (req, res) => {
+  await handleRequest(productService.deleteProductImage, req, res);
+};
+
+// PRODUCT SIZE
+const createProductSize = async (req, res) => {
+  await handleRequest(productService.createProductSize, req, res);
+};
+
+const getAllProductSize = async (req, res) => {
+  await handleRequest(productService.getAllProductSize, req, res);
+};
+
+const getProductSizeById = async (req, res) => {
+  await handleRequest(productService.getProductSizeById, req, res);
+};
+
+const updateProductSize = async (req, res) => {
+  await handleRequest(productService.updateProductSize, req, res);
+};
+
+const deleteProductSize = async (req, res) => {
+  await handleRequest(productService.deleteProductSize, req, res);
+};
+
+// Additional Product Functions
+const getProductFeature = async (req, res) => {
+  await handleRequest(productService.getProductFeature, req, res);
+};
+
+const getProductNew = async (req, res) => {
+  await handleRequest(productService.getProductNew, req, res);
+};
+
+module.exports = {
+  createProduct,
+  getAllProductAdmin,
+  getAllProductUser,
+  getProductById,
+  unActiveProduct,
+  activeProduct,
+  updateProduct,
+  createProductDetail,
+  getAllProductDetail,
+  getProductDetailById,
+  updateProductDetail,
+  deleteProductDetail,
+  createProductImage,
+  getAllProductImage,
+  getProductImageById,
+  updateProductImage,
+  deleteProductImage,
+  createProductSize,
+  getAllProductSize,
+  getProductSizeById,
+  updateProductSize,
+  deleteProductSize,
+  getProductFeature,
+  getProductNew,
+};
