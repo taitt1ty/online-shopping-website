@@ -14,23 +14,23 @@ const respFunction = (result, statusCode, errMessage) => {
 };
 
 const errorResponse = (fieldName) => {
-  return respFunction([], errors[0], `${fieldName}`);
+  return respFunction([], errors[0], [`${fieldName}`]);
 };
 
 const missingRequiredParams = (fieldName) => {
-  return respFunction([], errors[1], `${fieldName} is required!`);
+  return respFunction([], errors[1], [`${fieldName} is required!`]);
 };
 
 const notFound = (fieldName) => {
-  return respFunction([], errors[2], `${fieldName} not found!`);
+  return respFunction([], errors[2], [`${fieldName} not found!`]);
 };
 
 const notValid = (fieldName) => {
-  return respFunction([], errors[3], `${fieldName} is not valid!`);
+  return respFunction([], errors[3], [`${fieldName} is not valid!`]);
 };
 
 const successResponse = (fieldName) => {
-  return respFunction([], success, `${fieldName} successfully!`);
+  return respFunction([], success, [`${fieldName} successfully!`]);
 };
 
 module.exports = {

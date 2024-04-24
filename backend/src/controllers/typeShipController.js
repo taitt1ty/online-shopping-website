@@ -3,7 +3,7 @@ import { errorResponse } from "../utils/ResponseUtils";
 
 const handleRequest = async (handler, req, res) => {
   try {
-    const data = await handler(req.body);
+    const data = await handler(req.body, req.query, req.params);
     if (!data) {
       return res.status(404).json(errorResponse("Data not found"));
     }

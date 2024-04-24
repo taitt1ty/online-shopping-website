@@ -63,11 +63,11 @@ const getAllTypeShip = async (data) => {
     return {
       result: typeShips.rows,
       statusCode: 200,
-      errors: null,
+      errors: ["Type of ships retrieved successfully!"],
     };
   } catch (error) {
     console.error("Error in getAllTypeShip:", error);
-    return errorResponse("Failed to get all type of ships");
+    return errorResponse("Failed to retrieve type of ships");
   }
 };
 
