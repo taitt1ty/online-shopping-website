@@ -216,12 +216,9 @@ const getAllProductUser = async (data) => {
 
 const getProductById = async (id) => {
   try {
-    // Kiểm tra đối số đầu vào
     if (!id) {
       return missingRequiredParams("id");
     }
-
-    // Tìm kiếm sản phẩm
     const product = await db.Product.findOne({
       where: { id: id },
       include: [
@@ -233,22 +230,17 @@ const getProductById = async (id) => {
         },
         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
       ],
-      raw: false, // Đặt raw: false để trả về đối tượng thực thể thay vì mảng
+      raw: false,
     });
-
-    // Kiểm tra sản phẩm có tồn tại không
     if (!product) {
       return notFound("Product");
     }
-
-    // Tăng số lượt xem của sản phẩm
     product.view += 1;
     const updatedProduct = await product.save();
     if (!updatedProduct) {
       return errorResponse("Failed to update product view count");
     }
 
-    // Lấy thông tin chi tiết sản phẩm
     const productDetail = await db.ProductDetail.findAll({
       where: { productId: id },
       include: [
@@ -259,42 +251,30 @@ const getProductById = async (id) => {
       nest: true,
     });
 
-    // Tính toán số lượng tồn kho cho từng chi tiết sản phẩm
     for (let i = 0; i < productDetail.length; i++) {
       let quantity = 0;
-
-      // Lấy danh sách chi tiết phiếu nhập có id sản phẩm tương ứng
       const receiptDetails = await db.ReceiptDetail.findAll({
         where: { productDetailId: productDetail[i].id },
       });
-
-      // Lấy danh sách chi tiết đơn đặt hàng có id sản phẩm tương ứng
       const orderDetails = await db.OrderDetail.findAll({
         where: { productId: productDetail[i].id },
       });
-
-      // Tính tổng số lượng từ chi tiết phiếu nhập
       receiptDetails.forEach((receiptDetail) => {
         quantity += receiptDetail.quantity;
       });
-
-      // Trừ số lượng đã bán từ chi tiết đơn đặt hàng
       orderDetails.forEach((orderDetail) => {
         if (orderDetail.statusId !== "S7") {
           quantity -= orderDetail.quantity;
         }
       });
-
-      // Gán số lượng tồn kho cho chi tiết sản phẩm
       productDetail[i].stock = quantity;
     }
-
-    // Thêm thông tin chi tiết sản phẩm vào đối tượng sản phẩm
     product.productDetail = productDetail;
 
     return {
-      errorCode: 200,
-      data: product,
+      result: product,
+      statusCode: 200,
+      errors: "Product retrieved successfully!",
     };
   } catch (error) {
     console.error("Error retrieving product details:", error);
@@ -388,8 +368,8 @@ const createProductDetail = async (data) => {
       !data.discountPrice ||
       !data.productId
     ) {
-      throw new Error(
-        "color, originalPrice, discountPrice, or productId is missing"
+      return missingRequiredParams(
+        "color, originalPrice, discountPrice, or productId"
       );
     }
     const productDetail = await db.ProductDetail.create({
@@ -399,7 +379,7 @@ const createProductDetail = async (data) => {
       discountPrice: data.discountPrice,
     });
     if (!productDetail) {
-      throw new Error("Failed to create new product detail");
+      return errorResponse("Failed to create new product detail");
     }
     return successResponse("Created new product detail");
   } catch (error) {
@@ -412,44 +392,40 @@ const createProductDetail = async (data) => {
 
 const getAllProductDetail = async (data) => {
   try {
-    // Check if required parameters are provided
+    if (!data || !data.id || !data.limit || !data.offset) {
+      return errorResponse("Missing required parameters: id, limit, or offset");
+    }
+
     const { id, limit, offset } = data;
-    if (!id || !limit || !offset) {
-      return missingRequiredParams("id, limit, or offset");
+
+    const objectFilter = {
+      include: [
+        { model: db.ProductImage, as: "productImageData" },
+        { model: db.ProductSize, as: "productSizeData" },
+      ],
+      where: { productId: id },
+      limit: +limit,
+      offset: +offset,
+      raw: true,
+    };
+
+    const productDetails = await db.ProductDetail.findAndCountAll(objectFilter);
+
+    // Check if product details are found
+    if (!productDetails.rows.length) {
+      return notFound("Product details");
     }
 
-    // Find product details with pagination
-    const productDetail = await db.ProductDetail.findAndCountAll({
-      where: { productDetailId: data.id },
-      limit: +data.limit,
-      offset: +data.offset,
-    });
-
-    // Process product image data
-    if (productDetail.rows && productDetail.rows.length > 0) {
-      for (let i = 0; i < productDetail.rows.length; i++) {
-        // Find product images for each product detail
-        const productImages = await db.ProductImage.findAll({
-          where: { productDetailId: productDetail.rows[i].id },
-        });
-
-        // Convert image data to binary
-        if (productImages && productImages.length > 0) {
-          productDetail.rows[i].productImageData = productImages.map(
-            (image) => ({
-              ...image,
-              image: Buffer.from(image.image, "base64").toString("binary"),
-            })
-          );
-        }
-      }
-    }
-
-    return successResponse("Product details retrieved", {
-      data: productDetail.rows,
-      count: productDetail.count,
-    });
+    return {
+      result: {
+        data: productDetails.rows,
+        count: productDetails.count,
+      },
+      statusCode: 200,
+      errors: ["Product details retrieved successfully!"],
+    };
   } catch (error) {
+    console.error("Error retrieving product details:", error);
     return errorResponse("Failed to retrieve product details");
   }
 };
@@ -463,10 +439,14 @@ const getProductDetailById = async (id) => {
     let productDetail = await db.ProductDetail.findOne({
       where: { id: id },
     });
-
-    return successResponse("Product detail retrieved", {
-      data: productDetail,
-    });
+    if (!productDetail) {
+      return notFound("Product detail");
+    }
+    return {
+      result: productDetail,
+      statusCode: 200,
+      errors: ["Product detail retrieved successfully!"],
+    };
   } catch (error) {
     return errorResponse("Failed to retrieve product detail");
   }
@@ -483,16 +463,32 @@ const updateProductDetail = async (data) => {
       raw: false,
     });
 
-    if (productDetail) {
-      productDetail.originalPrice = data.originalPrice;
-      productDetail.discountPrice = data.discountPrice;
-      productDetail.color = data.color;
-      await productDetail.save();
-      return successResponse("Product detail updated");
-    } else {
-      return notValid("Product not found");
+    if (!productDetail) {
+      return notFound("Product detail");
     }
+    if (
+      (productDetail.originalPrice === data.originalPrice &&
+        productDetail.discountPrice === data.discountPrice) ||
+      productDetail.color === data.color
+    ) {
+      return {
+        result: [],
+        statusCode: 200,
+        errors: ["No changes detected. Product detail not updated."],
+      };
+    }
+    productDetail.originalPrice = data.originalPrice;
+    productDetail.discountPrice = data.discountPrice;
+    productDetail.color = data.color;
+    await productDetail.save();
+
+    return {
+      result: productDetail,
+      statusCode: 200,
+      errors: ["Product detail updated successfully"],
+    };
   } catch (error) {
+    console.error("Error updating product detail:", error);
     return errorResponse("Failed to update product detail");
   }
 };
@@ -565,18 +561,17 @@ const getAllProductImage = async (data) => {
       offset: +data.offset,
     });
 
-    if (productImage.rows && productImage.rows.length > 0) {
-      productImage.rows.forEach(
-        (item) =>
-          (item.image = new Buffer(item.image, "base64").toString("binary"))
-      );
+    if (!productImage.rows || productImage.rows.length === 0) {
+      return notFound("Product image");
     }
 
-    return successResponse("Retrieved product images", {
-      data: productImage.rows,
-      count: productImage.count,
-    });
+    return {
+      result: productImage,
+      statusCode: 200,
+      errors: ["Retrieved product images successfully"],
+    };
   } catch (error) {
+    console.error("Error retrieve product images", error);
     return errorResponse("Failed to retrieve product images");
   }
 };
@@ -590,26 +585,25 @@ const getProductImageById = async (id) => {
     let productDetailImage = await db.ProductImage.findOne({
       where: { id: id },
     });
-
-    if (productDetailImage) {
-      productDetailImage.image = new Buffer(
-        productDetailImage.image,
-        "base64"
-      ).toString("binary");
+    if (!productDetailImage) {
+      return notFound("Product image");
     }
 
-    return successResponse("Retrieved product image", {
-      data: productDetailImage,
-    });
+    return {
+      result: productDetailImage,
+      statusCode: 200,
+      errors: ["Retrieved product image successfully"],
+    };
   } catch (error) {
+    console.error("Error retrieving product detail image", error);
     return errorResponse("Failed to retrieve product detail image");
   }
 };
 
 const updateProductImage = async (data) => {
   try {
-    if (!data.id || !data.caption || !data.image) {
-      return missingRequiredParams("id, caption, or image");
+    if (!data.id || !data.image) {
+      return missingRequiredParams("id or image");
     }
 
     let productImage = await db.ProductImage.findOne({
@@ -617,15 +611,16 @@ const updateProductImage = async (data) => {
       raw: false,
     });
 
-    if (productImage) {
-      productImage.caption = data.caption;
-      productImage.image = data.image;
-      await productImage.save();
-      return successResponse("Updated product image");
-    } else {
-      return notValid("Product Image not found");
+    if (!productImage) {
+      return notValid("Product Image");
     }
+    // Update image into DB
+    productImage.image = data.image;
+    await productImage.save();
+
+    return successResponse("Updated product image");
   } catch (error) {
+    console.error("Error updating product image:", error);
     return errorResponse("Failed to update product image");
   }
 };
@@ -676,46 +671,40 @@ const createProductSize = async (data) => {
 
 const getAllProductSize = async (data) => {
   try {
-    if (!data.id || !data.limit || !data.offset) {
+    const { id, limit, offset } = data;
+
+    if (!id || !limit || !offset) {
       return missingRequiredParams("id, limit, or offset");
-    } else {
-      let productSizes = await db.ProductSize.findAndCountAll({
-        where: { productDetailId: data.id },
-        limit: +data.limit,
-        offset: +data.offset,
-        include: [
-          { model: db.AllCode, as: "sizeData", attributes: ["value", "code"] },
-        ],
-        raw: true,
-        nest: true,
+    }
+
+    const productSizes = await db.ProductSize.findAndCountAll({
+      where: { productDetailId: id },
+      limit: +limit,
+      offset: +offset,
+      include: [
+        { model: db.AllCode, as: "sizeData", attributes: ["value", "code"] },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    for (const productSize of productSizes.rows) {
+      const receiptQuantity = await db.ReceiptDetail.sum("quantity", {
+        where: { productSizeId: productSize.id },
       });
 
-      for (let i = 0; i < productSizes.rows.length; i++) {
-        let receiptDetail = await db.ReceiptDetail.findAll({
-          where: { productDetailSizeId: productSizes.rows[i].id },
-        });
-        let orderDetail = await db.OrderDetail.findAll({
-          where: { productId: productSizes.rows[i].id },
-        });
-        let quantity = 0;
+      const orderQuantity = await db.OrderDetail.sum("quantity", {
+        where: { productId: productSize.id },
+        include: {
+          model: db.OrderProduct,
+          where: { statusId: { [Op.ne]: "S7" } },
+        },
+      });
 
-        for (let j = 0; j < receiptDetail.length; j++) {
-          quantity += receiptDetail[j].quantity;
-        }
-
-        for (let k = 0; k < orderDetail.length; k++) {
-          let order = await db.OrderProduct.findOne({
-            where: { id: orderDetail[k].orderId },
-          });
-          if (order.statusId !== "S7") {
-            quantity -= orderDetail[k].quantity;
-          }
-        }
-        productSizes.rows[i].stock = quantity;
-      }
-
-      return successResponse("Product detail sizes retrieved", productSizes);
+      productSize.stock = receiptQuantity - orderQuantity;
     }
+
+    return successResponse("Product detail sizes retrieved", productSizes);
   } catch (error) {
     console.error(error);
     return errorResponse("Failed to retrieve product detail sizes");

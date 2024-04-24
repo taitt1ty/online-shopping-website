@@ -41,7 +41,13 @@ const getAllUser = async (req, res) => {
 };
 
 const getUserById = async (req, res) => {
-  return handleRequest(userService.getUserById, req, res);
+  try {
+    const data = await userService.getUserById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const checkUserPhoneNumber = async (req, res) => {

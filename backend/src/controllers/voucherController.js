@@ -21,35 +21,21 @@ const createTypeVoucher = async (req, res) => {
 };
 
 const getTypeVoucherById = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const typeVoucher = await voucherService.getTypeVoucherById(data.id);
-      if (!typeVoucher.result) {
-        return errorResponse("Type of voucher not found");
-      }
-      return typeVoucher;
-    },
-    req,
-    res
-  );
+  try {
+    const data = await voucherService.getTypeVoucherById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const getAllTypeVoucher = async (req, res) => {
-  return handleRequest(voucherService.getAllTypeVoucher, req.query, res);
+  return handleRequest(voucherService.getAllTypeVoucher, req, res);
 };
 
 const updateTypeVoucher = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const typeVoucher = await voucherService.updateTypeVoucher(req.body);
-      if (!typeVoucher) {
-        return errorResponse("Failed to update type of voucher");
-      }
-      return typeVoucher;
-    },
-    req,
-    res
-  );
+  return handleRequest(voucherService.updateTypeVoucher, req, res);
 };
 
 const deleteTypeVoucher = async (req, res) => {
@@ -67,35 +53,21 @@ const createVoucher = async (req, res) => {
 };
 
 const getVoucherById = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const voucher = await voucherService.getVoucherById(data.id);
-      if (!voucher.result) {
-        return errorResponse("Voucher not found");
-      }
-      return voucher;
-    },
-    req,
-    res
-  );
+  try {
+    const data = await voucherService.getVoucherById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const getAllVoucher = async (req, res) => {
-  return handleRequest(voucherService.getAllVoucher, req.query, res);
+  return handleRequest(voucherService.getAllVoucher, req, res);
 };
 
 const updateVoucher = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const voucher = await voucherService.updateVoucher(req.body);
-      if (!voucher) {
-        return errorResponse("Failed to update voucher");
-      }
-      return voucher;
-    },
-    req,
-    res
-  );
+  return handleRequest(voucherService.updateVoucher, req, res);
 };
 
 const deleteVoucher = async (req, res) => {
@@ -103,21 +75,17 @@ const deleteVoucher = async (req, res) => {
 };
 
 const saveUserVoucher = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const voucher = await voucherService.saveUserVoucher(req.body);
-      if (!voucher) {
-        return errorResponse("Failed to save user voucher");
-      }
-      return voucher;
-    },
-    req,
-    res
-  );
+    return handleRequest(voucherService.saveUserVoucher, req, res);
 };
 
 const getAllVoucherByUserId = async (req, res) => {
-  return handleRequest(voucherService.getVoucherByUserId, req, res);
+  try {
+    const data = await voucherService.getVoucherByUserId(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 module.exports = {

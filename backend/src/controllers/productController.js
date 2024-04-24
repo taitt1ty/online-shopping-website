@@ -1,5 +1,5 @@
 import productService from "../services/productService";
-import { errorResponse, successResponse } from "../utils/ResponseUtils";
+import { errorResponse } from "../utils/ResponseUtils";
 
 const handleRequest = async (handler, req, res) => {
   try {
@@ -43,17 +43,13 @@ const getAllProductUser = async (req, res) => {
 };
 
 const getProductById = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const product = await productService.getProductById(data.id);
-      if (!product.result) {
-        return errorResponse("Product not found");
-      }
-      return product;
-    },
-    req,
-    res
-  );
+  try {
+    const data = await productService.getProductById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const unActiveProduct = async (req, res) => {
@@ -74,13 +70,26 @@ const createProductDetail = async (req, res) => {
 };
 
 const getAllProductDetail = async (req, res) => {
-  await handleRequest(productService.getAllProductDetail, req, res);
+  try {
+    const { id, limit, offset } = req.query;
+    const requestData = { id, limit, offset };
+    const data = await productService.getAllProductDetail(requestData);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    console.error("Error handling request:", error);
+    return res.status(500).json(errorResponse("Internal server error"));
+  }
 };
 
 const getProductDetailById = async (req, res) => {
-  await handleRequest(productService.getProductDetailById, req, res);
+  try {
+    const data = await productService.getProductDetailById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
-
 const updateProductDetail = async (req, res) => {
   await handleRequest(productService.updateProductDetail, req, res);
 };
@@ -95,11 +104,35 @@ const createProductImage = async (req, res) => {
 };
 
 const getAllProductImage = async (req, res) => {
-  await handleRequest(productService.getAllProductImage, req, res);
+  try {
+    const { id, limit, offset } = req.query;
+
+    if (!id || !limit || !offset) {
+      return res
+        .status(400)
+        .json(missingRequiredParams("id, limit, or offset"));
+    }
+
+    const data = { id, limit, offset };
+    const result = await productService.getAllProductImage(data);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error getting product images:", error);
+    return res
+      .status(500)
+      .json(errorResponse("Failed to retrieve product images"));
+  }
 };
 
 const getProductImageById = async (req, res) => {
-  await handleRequest(productService.getProductImageById, req, res);
+  try {
+    const data = await productService.getProductImageById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const updateProductImage = async (req, res) => {
@@ -120,7 +153,13 @@ const getAllProductSize = async (req, res) => {
 };
 
 const getProductSizeById = async (req, res) => {
-  await handleRequest(productService.getProductSizeById, req, res);
+  try {
+    const data = await productService.getProductSizeById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const updateProductSize = async (req, res) => {

@@ -28,7 +28,13 @@ const updateCode = async (req, res) => {
 };
 
 const getCodeById = async (req, res) => {
-  return handleRequest(allCodeService.getCodeById, req, res);
+  try {
+    const data = await allCodeService.getCodeById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const deleteCode = async (req, res) => {

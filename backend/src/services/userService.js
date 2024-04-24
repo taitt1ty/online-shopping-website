@@ -226,7 +226,7 @@ const changePassword = async (data) => {
   }
 };
 
-module.exports = {
+export default {
   registerUser,
   loginUser,
   deleteUser,
