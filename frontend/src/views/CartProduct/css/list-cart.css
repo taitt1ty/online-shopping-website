@@ -1,0 +1,151 @@
+/* .order {
+display: none;
+} */
+#totalBill {
+  height: 100%; /* hoặc giá trị cụ thể tùy thuộc vào layout của bạn */
+}
+.fixed {
+  display: fixed;
+  bottom: 0;
+  z-index: 2;
+}
+.sticky {
+  position: sticky;
+  top: 0; /* hoặc giá trị cụ thể tùy thuộc vào vị trí bạn muốn */
+  background-color: white; /* Màu nền của phần tử sticky */
+  z-index: 100; /* Đảm bảo nằm trên các phần tử khác */
+}
+.margin-left-0 {
+  margin-left: 0px;
+}
+.hidden {
+  display: none;
+}
+.display-block {
+  display: block;
+}
+.background {
+  background-color: #f9ece6;
+  margin-right: 45px;
+  position: fixed;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  height: 10%;
+}
+.btn-delete {
+  border: none;
+  background-color: #fff;
+  cursor: pointer;
+}
+.color-price {
+  color: orangered;
+}
+.btn-add {
+  border-radius: 0;
+  /* padding: 10px 40px; */
+}
+.left-absolute {
+  position: absolute;
+  left: 30px;
+  color: black;
+}
+.position-relative {
+  position: relative;
+}
+.text-align-left-absolute {
+  text-align: left;
+  position: absolute;
+  left: 0;
+}
+.border2 {
+  color: black;
+  display: flex;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+}
+.border {
+  color: gray;
+  display: flex;
+  text-align: center;
+}
+.text-align-center {
+  margin-top: 40px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+.margin-top-30 {
+  margin-top: 30px;
+}
+.right {
+  text-align: right;
+}
+.backgr {
+  background-color: orangered;
+  color: white;
+  padding: 5px 40px;
+}
+.quantity {
+  outline: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.1s cubic-bezier(0.4, 0, 0.6, 1);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 2px;
+  background: transparent;
+  color: black;
+  width: 32px;
+  height: 30px;
+  display: inline;
+}
+.inputQuantity {
+  width: 50px;
+  height: 30px;
+  border-left: 0;
+  border-right: 0;
+  font-size: 16px;
+  font-weight: 400;
+  box-sizing: border-box;
+  text-align: center;
+  cursor: text;
+  border-radius: 0;
+  display: inline;
+  margin: 7px 0;
+}
+
+.grid {
+  .row .col-md-2 {
+    display: flex;
+    justify-content: center;
+    vertical-align: middle;
+    text-align: center;
+  }
+}
+@media screen and (max-width: 1023px) {
+  .btn {
+    margin: 20px;
+  }
+  .picture-box {
+  }
+  .background {
+    height: 15%;
+  }
+}
+@media screen and (max-width: 800px) {
+  .row {
+    --bs-gutter-x: 0;
+  }
+  .picture-box {
+    width: 30%;
+  }
+  .border {
+    display: none;
+  }
+}
