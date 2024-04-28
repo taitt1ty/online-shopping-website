@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
   ReceiptDetail.init(
     {
       receiptId: DataTypes.INTEGER,
-      productSizeId: DataTypes.INTEGER,
+      sizeId: DataTypes.INTEGER,
       quantity: DataTypes.INTEGER,
       price: DataTypes.BIGINT,
     },

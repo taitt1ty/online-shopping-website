@@ -9,7 +9,12 @@ require("dotenv").config();
 import moment from "moment";
 import localization from "moment/locale/vi";
 // import { EXCHANGE_RATES } from "../utils/Constants";
-import { successResponse, errorResponse } from "../utils/ResponseUtils";
+import {
+  successResponse,
+  errorResponse,
+  missingRequiredParams,
+  notFound,
+} from "../utils/ResponseUtils";
 
 // moment.updateLocale("vi", localization);
 // paypal.configure({
@@ -23,9 +28,9 @@ import { successResponse, errorResponse } from "../utils/ResponseUtils";
 const createOrder = async (data) => {
   try {
     if (!data.addressUserId || !data.typeShipId) {
-      return errorResponse("Missing required parameter !");
+      return missingRequiredParams("addressUserId and typeShipId");
     }
-    let product = await db.OrderProduct.create({
+    const product = await db.Order.create({
       addressUserId: data.addressUserId,
       isPaymentOnline: data.isPaymentOnline,
       statusId: "S3",
@@ -35,48 +40,41 @@ const createOrder = async (data) => {
     });
 
     // Update orderId for products in shop cart
-    data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
-      item.orderId = product.dataValues.id;
-      return item;
-    });
+    const updatedShopCart = data.arrDataShopCart.map((item) => ({
+      ...item,
+      orderId: product.id,
+    }));
 
     // Add order detail
-    await db.OrderDetail.bulkCreate(data.arrDataShopCart);
+    await db.OrderDetail.bulkCreate(updatedShopCart);
 
     // Delete ordered products from the shopping cart
-    let res = await db.ShopCart.findOne({
+    const shopCartItems = await db.ShopCart.findAll({
       where: { userId: data.userId, statusId: 0 },
     });
-
-    if (res) {
-      await db.ShopCart.destroy({
-        where: { userId: data.userId },
-      });
-
+    if (shopCartItems.length > 0) {
+      await db.ShopCart.destroy({ where: { userId: data.userId } });
       // Update product inventory quantity
-      for (let i = 0; i < data.arrDataShopCart.length; i++) {
-        let productDetailSize = await db.ProductDetailSize.findOne({
-          where: { id: data.arrDataShopCart[i].productId },
-          raw: false,
-        });
-        productDetailSize.stock -= data.arrDataShopCart[i].quantity;
-        await productDetailSize.save();
+      for (const cartItem of updatedShopCart) {
+        const productSize = await db.productSize.findByPk(cartItem.productId);
+        if (productSize) {
+          productSize.stock -= cartItem.quantity;
+          await productSize.save();
+        }
       }
     }
 
     // Voucher code used
     if (data.voucherId && data.userId) {
-      let voucherUses = await db.VoucherUsed.findOne({
+      const voucherUse = await db.VoucherUsed.findOne({
         where: { voucherId: data.voucherId, userId: data.userId },
-        raw: false,
       });
-      voucherUses.status = 1;
-      await voucherUses.save();
+      if (voucherUse) {
+        voucherUse.status = 1;
+        await voucherUse.save();
+      }
     }
-
-    return successResponse("Order created successfully", {
-      orderId: product.dataValues.id,
-    });
+    return successResponse("Order created");
   } catch (error) {
     console.error("Error in create order:", error);
     return errorResponse("Error from server");
@@ -105,7 +103,15 @@ const getAllOrders = async (data) => {
       objectFilter.where = { statusId: data.statusId };
     }
 
-    let { rows, count } = await db.OrderProduct.findAndCountAll(objectFilter);
+    let { rows, count } = await db.Order.findAndCountAll(objectFilter);
+
+    if (rows.length === 0) {
+      return {
+        result: [],
+        errCode: 0,
+        errors: ["No orders found!"],
+      };
+    }
 
     for (let i = 0; i < rows.length; i++) {
       let [addressUser, shipper] = await Promise.all([
@@ -122,7 +128,7 @@ const getAllOrders = async (data) => {
     }
 
     return {
-      result: [rows],
+      result: rows,
       errCode: 0,
       errors: ["Retrieved all order successfully!"],
     };
@@ -135,10 +141,15 @@ const getAllOrders = async (data) => {
 const getOrderById = async (id) => {
   try {
     if (!id) {
-      return errorResponse("Id is required!");
+      return missingRequiredParams("Id");
     }
 
-    let order = await db.OrderProduct.findOne({
+    const processImage = async (link) => {
+      // Code để xử lý hình ảnh từ link
+      return link;
+    };
+
+    const order = await db.Order.findOne({
       where: { id: id },
       include: [
         { model: db.TypeShip, as: "typeShipData" },
@@ -149,69 +160,83 @@ const getOrderById = async (id) => {
       nest: true,
     });
 
-    if (order.image) {
-      order.image = Buffer.from(order.image, "base64").toString("binary");
+    if (!order) {
+      return notFound(`Order with id ${id}`);
     }
 
-    order.voucherData.typeVoucherOfVoucherData = await db.TypeVoucher.findOne({
-      where: { id: order.voucherData.typeVoucherId },
-    });
-
-    let orderDetail = await db.OrderDetail.findAll({ where: { orderId: id } });
-
-    for (let i = 0; i < orderDetail.length; i++) {
-      let productSize = await db.ProductSize.findOne({
-        where: { id: orderDetail[i].productId },
-        include: [{ model: db.AllCode, as: "sizeData" }],
-        raw: true,
-        nest: true,
-      });
-
-      orderDetail[i].productSize = productSize;
-
-      orderDetail[i].productDetail = await db.ProductDetail.findOne({
-        where: { id: productSize.productDetailId },
-      });
-
-      orderDetail[i].product = await db.Product.findOne({
-        where: { id: orderDetail[i].productDetail.productId },
-      });
-
-      let productImages = await db.ProductImage.findAll({
-        where: { productDetailId: orderDetail[i].productDetail.id },
-      });
-
-      for (let j = 0; j < productImages.length; j++) {
-        productImages[j].image = Buffer.from(
-          productImages[j].image,
-          "base64"
-        ).toString("binary");
-      }
-
-      orderDetail[i].productImage = productImages;
-    }
-
-    order.orderDetail = orderDetail;
-
-    let addressUser = await db.AddressUser.findOne({
+    // Lấy thông tin địa chỉ người dùng và người dùng
+    const addressUser = await db.AddressUser.findOne({
       where: { id: order.addressUserId },
     });
 
-    order.addressUser = addressUser;
+    if (!addressUser) {
+      return notFound(`addressUser for order  with id ${addressUser.id}`);
+    }
 
-    let user = await db.User.findOne({
+    const user = await db.User.findOne({
       where: { id: addressUser.userId },
       attributes: { exclude: ["password", "image"] },
       raw: true,
       nest: true,
     });
 
+    if (!user) {
+      return notFound(`User for addressUser with id ${addressUser.id}.`);
+    }
+
+    // Xử lý hình ảnh và loại voucher
+    if (order.image) {
+      order.image = await processImage(order.image);
+    }
+
+    order.voucherData.typeVoucherOfVoucherData = await db.TypeVoucher.findOne({
+      where: { id: order.voucherData.typeVoucherId },
+    });
+
+    // Lấy danh sách orderDetail
+    const orderDetail = await db.OrderDetail.findAll({
+      where: { orderId: id },
+    });
+
+    // Xử lý orderDetail
+    for (let i = 0; i < orderDetail.length; i++) {
+      const productSize = await db.ProductSize.findOne({
+        where: { id: orderDetail[i].productId },
+        include: [{ model: db.AllCode, as: "productSizeData" }],
+        raw: true,
+        nest: true,
+      });
+
+      orderDetail[i].productSize = productSize;
+      orderDetail[i].productDetail = await db.ProductDetail.findOne({
+        where: { id: productSize.productDetailId },
+      });
+      orderDetail[i].product = await db.Product.findOne({
+        where: { id: orderDetail[i].productDetail.productId },
+      });
+
+      // Xử lý hình ảnh của sản phẩm
+      const productImages = await db.ProductImage.findAll({
+        where: { productDetailId: orderDetail[i].productDetail.id },
+      });
+
+      for (let j = 0; j < productImages.length; j++) {
+        if (productImages[j].image) {
+          productImages[j].image = await processImage(productImages[j].image);
+        }
+      }
+
+      orderDetail[i].productImage = productImages;
+    }
+
+    order.orderDetail = orderDetail;
+    order.addressUser = addressUser;
     order.userData = user;
 
     return {
       result: [order],
       errCode: 200,
-      errors: [`Retrieved order ${is} is successfully!`],
+      errors: [`Retrieved order ${id} successfully!`],
     };
   } catch (error) {
     return errorResponse(error.message);
@@ -220,18 +245,27 @@ const getOrderById = async (id) => {
 
 const updateStatusOrder = async (data) => {
   try {
-    if (!data.id || !data.statusId) {
-      return errorResponse("Id, statusId are required!");
+    const { id, statusId } = data;
+
+    if (!id || !statusId) {
+      return missingRequiredParams("Id, statusId are");
     }
 
-    let order = await db.OrderProduct.findOne({ where: { id: data.id } });
+    let order = await db.Order.findOne({ where: { id: data.id } });
 
+    if (!order) {
+      return notFound(`Order with id ${id}`);
+    }
+
+    // Cập nhật trạng thái đơn hàng
     order.statusId = data.statusId;
-
     await order.save();
+    console.log("Order found:", order);
 
+    // Nếu trạng thái là 'S7' và có dữ liệu orderDetail được cung cấp
     if (
       data.statusId === "S7" &&
+      data.dataOrder &&
       data.dataOrder.orderDetail &&
       data.dataOrder.orderDetail.length > 0
     ) {
@@ -240,11 +274,18 @@ const updateStatusOrder = async (data) => {
           where: { id: data.dataOrder.orderDetail[i].productSize.id },
         });
 
-        productSize.stock += data.dataOrder.orderDetail[i].quantity;
+        if (!productSize) {
+          return notFound(
+            `ProductSize for id ${data.dataOrder.orderDetail[i].productSize.id}.`
+          );
+        }
 
+        // Cập nhật số lượng tồn kho của sản phẩm
+        productSize.stock += data.dataOrder.orderDetail[i].quantity;
         await productSize.save();
       }
     }
+
     return successResponse("Updated status order");
   } catch (error) {
     return errorResponse(error.message);
@@ -262,7 +303,7 @@ const getAllOrdersByUser = async (userId) => {
     });
 
     for (let i = 0; i < addressUsers.length; i++) {
-      let orders = await db.OrderProduct.findAll({
+      let orders = await db.Order.findAll({
         where: { addressUserId: addressUsers[i].id },
         include: [
           { model: db.TypeShip, as: "typeShipData" },
@@ -356,7 +397,7 @@ const getAllOrdersByShipper = async (data) => {
       objectFilter.where = { ...objectFilter.where, statusId: "S6" };
     }
 
-    let orders = await db.OrderProduct.findAll(objectFilter);
+    let orders = await db.Order.findAll(objectFilter);
 
     for (let i = 0; i < orders.length; i++) {
       let addressUser = await db.AddressUser.findOne({
@@ -504,7 +545,7 @@ const paymentOrderSuccess = async (data) => {
       );
     });
 
-    const product = await db.OrderProduct.create({
+    const product = await db.Order.create({
       addressUserId: data.addressUserId,
       isPaymentOnline: data.isPaymentOnline,
       statusId: "S3",
@@ -563,14 +604,14 @@ const confirmOrder = async (data) => {
       return errorResponse("Missing required parameter !");
     }
 
-    const orderProduct = await db.OrderProduct.findOne({
+    const Order = await db.Order.findOne({
       where: { id: data.orderId },
       raw: false,
     });
 
-    orderProduct.shipperId = data.shipperId;
-    orderProduct.statusId = data.statusId;
-    await orderProduct.save();
+    Order.shipperId = data.shipperId;
+    Order.statusId = data.statusId;
+    await Order.save();
 
     return successResponse("ok");
   } catch (error) {

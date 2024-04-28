@@ -690,13 +690,13 @@ const getAllProductSize = async (data) => {
 
     for (const productSize of productSizes.rows) {
       const receiptQuantity = await db.ReceiptDetail.sum("quantity", {
-        where: { productSizeId: productSize.id },
+        where: { sizeId: productSize.id },
       });
 
       const orderQuantity = await db.OrderDetail.sum("quantity", {
         where: { productId: productSize.id },
         include: {
-          model: db.OrderProduct,
+          model: db.Order,
           where: { statusId: { [Op.ne]: "S7" } },
         },
       });
@@ -716,10 +716,10 @@ const getProductSizeById = async (id) => {
     if (!id) {
       return missingRequiredParams("id");
     } else {
-      const productDetailSize = await db.ProductDetailSize.findOne({
+      const productSize = await db.productSize.findOne({
         where: { id: id },
       });
-      if (!productDetailSize) {
+      if (!productSize) {
         return notValid("Product Size not found");
       }
       return successResponse("Product size retrieved");
@@ -735,16 +735,16 @@ const updateProductSize = async (data) => {
     if (!data.id || !data.sizeId) {
       return missingRequiredParams("id or sizeId");
     } else {
-      let productDetailSize = await db.ProductDetailSize.findOne({
+      let productSize = await db.productSize.findOne({
         where: { id: data.id },
       });
-      if (!productDetailSize) {
-        return notValid("Product Size not found");
+      if (!productSize) {
+        return notFound("Product size");
       }
-      productDetailSize.sizeId = data.sizeId;
-      productDetailSize.height = data.height;
-      productDetailSize.weight = data.weight;
-      await productDetailSize.save();
+      productSize.sizeId = data.sizeId;
+      productSize.height = data.height;
+      productSize.weight = data.weight;
+      await productSize.save();
       return successResponse("Product size updated");
     }
   } catch (error) {
@@ -758,13 +758,13 @@ const deleteProductSize = async (data) => {
     if (!data.id) {
       return missingRequiredParams("id");
     } else {
-      let productDetailSize = await db.ProductDetailSize.findOne({
+      let productSize = await db.productSize.findOne({
         where: { id: data.id },
       });
-      if (!productDetailSize) {
+      if (!productSize) {
         return notValid("Product Size not found");
       }
-      await db.ProductDetailSize.destroy({
+      await db.productSize.destroy({
         where: { id: data.id },
       });
       return successResponse("Product size deleted");
@@ -803,11 +803,10 @@ const getProductFeature = async (limit) => {
       );
 
       for (let j = 0; j < res[i].productDetail.length; j++) {
-        res[i].productDetail[j].productDetailSize =
-          await db.ProductDetailSize.findAll({
-            where: { productDetailId: res[i].productDetail[j].id },
-            raw: true,
-          });
+        res[i].productDetail[j].productSize = await db.productSize.findAll({
+          where: { productDetailId: res[i].productDetail[j].id },
+          raw: true,
+        });
 
         res[i].price = res[i].productDetail[0].discountPrice;
 
@@ -865,11 +864,10 @@ const getProductNew = async (limit) => {
       );
 
       for (let j = 0; j < res[i].productDetail.length; j++) {
-        res[i].productDetail[j].productDetailSize =
-          await db.ProductDetailSize.findAll({
-            where: { productDetailId: res[i].productDetail[j].id },
-            raw: true,
-          });
+        res[i].productDetail[j].productSize = await db.productSize.findAll({
+          where: { productDetailId: res[i].productDetail[j].id },
+          raw: true,
+        });
 
         res[i].price = res[i].productDetail[0].discountPrice;
 

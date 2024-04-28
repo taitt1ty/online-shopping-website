@@ -3,14 +3,14 @@ import { successResponse, errorResponse } from "../utils/ResponseUtils";
 
 const addShopCart = async (data) => {
   try {
-    if (!data.userId || !data.productSizeId || !data.quantity) {
+    if (!data.userId || !data.sizeId || !data.quantity) {
       return errorResponse("Missing required parameter!");
     }
 
     const cart = await db.ShopCart.findOne({
       where: {
         userId: data.userId,
-        productSizeId: data.productSizeId,
+        sizeId: data.sizeId,
         statusId: 0,
       },
       raw: false,
@@ -19,13 +19,13 @@ const addShopCart = async (data) => {
     if (cart) {
       // Find the product's inventory quantity
       let res = await db.ProductSize.findOne({
-        where: { id: data.productSizeId },
+        where: { id: data.sizeId },
       });
       if (res) {
         // Calculate inventory quantity based on invoice and purchase order details
         /*
         let receiptDetail = await db.ReceiptDetail.findAll({
-          where: { productSizeId: res.id },
+          where: { sizeId: res.id },
         });
         let orderDetail = await db.OrderDetail.findAll({
           where: { productId: res.id },
@@ -35,7 +35,7 @@ const addShopCart = async (data) => {
           quantity += receiptDetail[j].quantity;
         }
         for (let k = 0; k < orderDetail.length; k++) {
-          let order = await db.OrderProduct.findOne({
+          let order = await db.Order.findOne({
             where: { id: orderDetail[k].orderId },
           });
           // Do not calculate quantities from unfulfilled orders
@@ -66,13 +66,13 @@ const addShopCart = async (data) => {
     } else {
       // If the shopping cart does not exist, create a new shopping cart
       let res = await db.ProductSize.findOne({
-        where: { id: data.productSizeId },
+        where: { id: data.sizeId },
       });
       if (res) {
         // Calculate inventory quantity based on invoice and purchase order details
         /*
         let receiptDetail = await db.ReceiptDetail.findAll({
-          where: { productSizeId: res.id },
+          where: { sizeId: res.id },
         });
         let orderDetail = await db.OrderDetail.findAll({
           where: { productId: res.id },
@@ -82,7 +82,7 @@ const addShopCart = async (data) => {
           quantity += receiptDetail[j].quantity;
         }
         for (let k = 0; k < orderDetail.length; k++) {
-          let order = await db.OrderProduct.findOne({
+          let order = await db.Order.findOne({
             where: { id: orderDetail[k].orderId },
           });
           if (order.statusId != "S7") {
@@ -98,7 +98,7 @@ const addShopCart = async (data) => {
         } else {
           await db.ShopCart.create({
             userId: data.userId,
-            productSizeId: data.productSizeId,
+            sizeId: data.sizeId,
             quantity: data.quantity,
             statusId: 0,
           });
@@ -113,24 +113,25 @@ const addShopCart = async (data) => {
   }
 };
 
-const getShopCartByUserId = async (id) => {
+const getShopCartByUserId = async (userId) => {
   try {
-    if (!id) {
-      return errorResponse("Missing required parameter !");
+    if (!userId) {
+      return errorResponse("Missing required parameter userId!");
     }
 
     const shopCartItems = await db.ShopCart.findAll({
-      where: { userId: id, statusId: 0 },
+      where: { userId: userId, statusId: 0 },
+      raw: true,
     });
 
-    if (shopCartItems.length === 0) {
+    if (!shopCartItems || shopCartItems.length === 0) {
       return errorResponse("No shop cart items found for the user!");
     }
 
     const data = [];
     for (const item of shopCartItems) {
       const productDetail = await db.ProductDetail.findOne({
-        where: { id: item.productSizeId },
+        where: { id: item.sizeId },
         include: [
           {
             model: db.Product,
@@ -143,27 +144,31 @@ const getShopCartByUserId = async (id) => {
           { model: db.ProductImage, as: "productImageData" },
           { model: db.ProductSize, as: "productSizeData" },
         ],
+        raw: true,
       });
 
       if (!productDetail) {
         continue;
       }
 
-      const productImages = productDetail.productImageData.map(
-        (image) => image.image
-      );
+      const productImages = productDetail.productImageData;
+      if (productImages) {
+        const productImages = productImages.map(
+          (productImage) => productImage.image
+        );
+      }
 
       data.push({
-        ...item.dataValues,
+        ...item,
         productDetail,
-        productImages,
+        productImages: productImages,
       });
     }
 
     return {
       result: data,
       statusCode: 200,
-      errors: [`Retrieved items userId = ${id} successfully!`],
+      errors: [`Retrieved items userId = ${userId} successfully!`],
     };
   } catch (error) {
     console.error("Error in getShopCartByUserId:", error);
@@ -171,10 +176,10 @@ const getShopCartByUserId = async (id) => {
   }
 };
 
-const deleteItemShopCart = async (data) => {
+const deleteItem = async (data) => {
   try {
     if (!data.id) {
-      return errorResponse("Missing required parameter !");
+      return errorResponse("Missing required parameter!");
     }
 
     const res = await db.ShopCart.findOne({
@@ -185,9 +190,9 @@ const deleteItemShopCart = async (data) => {
       return successResponse("ok");
     }
   } catch (error) {
-    console.error("Error in deleteItemShopCart:", error);
+    console.error("Error in deleteItem:", error);
     return errorResponse("Failed to delete item from shop cart");
   }
 };
 
-export default { addShopCart, getShopCartByUserId, deleteItemShopCart };
+export default { addShopCart, getShopCartByUserId, deleteItem };

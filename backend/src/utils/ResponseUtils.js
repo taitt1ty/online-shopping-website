@@ -18,7 +18,7 @@ const errorResponse = (fieldName) => {
 };
 
 const missingRequiredParams = (fieldName) => {
-  return respFunction([], errors[1], [`${fieldName} is required!`]);
+  return respFunction([], errors[1], [`${fieldName} required!`]);
 };
 
 const notFound = (fieldName) => {

@@ -8,8 +8,8 @@ const {
 
 const createReceipt = async (data) => {
   try {
-    const { userId, supplierId, productSizeId, quantity, price } = data;
-    if (!userId || !supplierId || !productSizeId || !quantity || !price) {
+    const { userId, supplierId, sizeId, quantity, price } = data;
+    if (!userId || !supplierId || !sizeId || !quantity || !price) {
       return errorResponse("Missing required parameters!", 400);
     }
 
@@ -17,7 +17,7 @@ const createReceipt = async (data) => {
     if (receipt) {
       await db.ReceiptDetail.create({
         receiptId: receipt.id,
-        productSizeId,
+        sizeId,
         quantity,
         price,
       });
@@ -32,14 +32,14 @@ const createReceipt = async (data) => {
 
 const createReceiptDetail = async (data) => {
   try {
-    const { receiptId, productSizeId, quantity, price } = data;
-    if (!receiptId || !productSizeId || !quantity || !price) {
+    const { receiptId, sizeId, quantity, price } = data;
+    if (!receiptId || !sizeId || !quantity || !price) {
       return errorResponse("Missing required parameters!");
     }
 
     await db.ReceiptDetail.create({
       receiptId,
-      productSizeId,
+      sizeId,
       quantity,
       price,
     });
@@ -68,7 +68,7 @@ const getReceiptById = async (id) => {
     if (receiptDetail && receiptDetail.length > 0) {
       for (let i = 0; i < receiptDetail.length; i++) {
         const productSize = await db.ProductSize.findOne({
-          where: { id: receiptDetail[i].productSizeId },
+          where: { id: receiptDetail[i].sizeId },
           include: [
             {
               model: db.AllCode,

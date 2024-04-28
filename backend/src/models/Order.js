@@ -34,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       note: DataTypes.STRING,
       isPaymentOnline: DataTypes.INTEGER,
       shipperId: DataTypes.INTEGER,
-      image: DataTypes.BLOB("long"),
+      image: DataTypes.STRING,
     },
     {
       sequelize,

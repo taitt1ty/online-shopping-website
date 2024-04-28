@@ -14,7 +14,7 @@ module.exports = {
       receiptId: {
         type: Sequelize.INTEGER,
       },
-      productSizeId: {
+      sizeId: {
         type: Sequelize.INTEGER,
       },
       quantity: {

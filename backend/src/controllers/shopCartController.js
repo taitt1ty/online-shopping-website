@@ -13,7 +13,7 @@ const addShopCart = async (req, res) => {
 
 const getShopCartByUserId = async (req, res) => {
   try {
-    const data = await shopCartService.getShopCartByUserId(req.query.id);
+    const data = await shopCartService.getShopCartByUserId(req.query.userId);
     return res.status(200).json(data);
   } catch (error) {
     console.error("Error in getShopCartByUserId:", error);
@@ -23,8 +23,9 @@ const getShopCartByUserId = async (req, res) => {
 
 const deleteItem = async (req, res) => {
   try {
-    const data = await shopCartService.deleteItem(req.body);
-    return res.status(200).json(data);
+    const data = { id: req.query.id };
+    const result = await shopCartService.deleteItem(data);
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Error in deleteItem:", error);
     return res.status(200).json(errorResponse("Error from server"));
