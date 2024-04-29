@@ -1,14 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 import db from "../models/index";
-// import paypal from "paypal-rest-sdk";
+import paypal from "paypal-rest-sdk";
 const { Op } = require("sequelize");
 var querystring = require("qs");
 var crypto = require("crypto");
-// var dateFormat = require("dateformat");
 require("dotenv").config();
 import moment from "moment";
 import localization from "moment/locale/vi";
-// import { EXCHANGE_RATES } from "../utils/Constants";
+import { EXCHANGE_RATES } from "../utils/Constants";
 import {
   successResponse,
   errorResponse,
@@ -16,14 +15,14 @@ import {
   notFound,
 } from "../utils/ResponseUtils";
 
-// moment.updateLocale("vi", localization);
-// paypal.configure({
-//   mode: "sandbox",
-//   client_id:
-//     "AaeuRt8WCq9SBliEVfEyXXQMosfJD-U9emlCflqe8Blz_KWZ3lnXh1piEMcXuo78MvWj0hBKgLN-FamT",
-//   client_secret:
-//     "ENWZDMzk17X3mHFJli7sFlS9RT1Vi_aocaLsrftWZ2tjHtBVFMzr4kPf5_9iIcsbFWsHf95vXVi6EADv",
-// });
+moment.updateLocale("vi", localization);
+paypal.configure({
+  mode: "sandbox",
+  client_id:
+    "AaeuRt8WCq9SBliEVfEyXXQMosfJD-U9emlCflqe8Blz_KWZ3lnXh1piEMcXuo78MvWj0hBKgLN-FamT",
+  client_secret:
+    "ENWZDMzk17X3mHFJli7sFlS9RT1Vi_aocaLsrftWZ2tjHtBVFMzr4kPf5_9iIcsbFWsHf95vXVi6EADv",
+});
 
 const createOrder = async (data) => {
   try {
@@ -145,7 +144,6 @@ const getOrderById = async (id) => {
     }
 
     const processImage = async (link) => {
-      // Code để xử lý hình ảnh từ link
       return link;
     };
 
@@ -163,42 +161,30 @@ const getOrderById = async (id) => {
     if (!order) {
       return notFound(`Order with id ${id}`);
     }
-
-    // Lấy thông tin địa chỉ người dùng và người dùng
     const addressUser = await db.AddressUser.findOne({
       where: { id: order.addressUserId },
     });
-
     if (!addressUser) {
       return notFound(`addressUser for order  with id ${addressUser.id}`);
     }
-
     const user = await db.User.findOne({
       where: { id: addressUser.userId },
       attributes: { exclude: ["password", "image"] },
       raw: true,
       nest: true,
     });
-
     if (!user) {
       return notFound(`User for addressUser with id ${addressUser.id}.`);
     }
-
-    // Xử lý hình ảnh và loại voucher
     if (order.image) {
       order.image = await processImage(order.image);
     }
-
     order.voucherData.typeVoucherOfVoucherData = await db.TypeVoucher.findOne({
       where: { id: order.voucherData.typeVoucherId },
     });
-
-    // Lấy danh sách orderDetail
     const orderDetail = await db.OrderDetail.findAll({
       where: { orderId: id },
     });
-
-    // Xử lý orderDetail
     for (let i = 0; i < orderDetail.length; i++) {
       const productSize = await db.ProductSize.findOne({
         where: { id: orderDetail[i].productId },
@@ -206,7 +192,6 @@ const getOrderById = async (id) => {
         raw: true,
         nest: true,
       });
-
       orderDetail[i].productSize = productSize;
       orderDetail[i].productDetail = await db.ProductDetail.findOne({
         where: { id: productSize.productDetailId },
@@ -214,25 +199,19 @@ const getOrderById = async (id) => {
       orderDetail[i].product = await db.Product.findOne({
         where: { id: orderDetail[i].productDetail.productId },
       });
-
-      // Xử lý hình ảnh của sản phẩm
       const productImages = await db.ProductImage.findAll({
         where: { productDetailId: orderDetail[i].productDetail.id },
       });
-
       for (let j = 0; j < productImages.length; j++) {
         if (productImages[j].image) {
           productImages[j].image = await processImage(productImages[j].image);
         }
       }
-
       orderDetail[i].productImage = productImages;
     }
-
     order.orderDetail = orderDetail;
     order.addressUser = addressUser;
     order.userData = user;
-
     return {
       result: [order],
       errCode: 200,
@@ -245,47 +224,41 @@ const getOrderById = async (id) => {
 
 const updateStatusOrder = async (data) => {
   try {
-    const { id, statusId } = data;
+    const { id, statusId, dataOrder } = data;
 
     if (!id || !statusId) {
       return missingRequiredParams("Id, statusId are");
     }
 
-    let order = await db.Order.findOne({ where: { id: data.id } });
+    const [updatedRowsCount, updatedRows] = await db.Order.update(
+      { statusId: statusId },
+      { where: { id: id } }
+    );
 
-    if (!order) {
+    if (updatedRowsCount === 0) {
       return notFound(`Order with id ${id}`);
     }
-
-    // Cập nhật trạng thái đơn hàng
-    order.statusId = data.statusId;
-    await order.save();
-    console.log("Order found:", order);
-
-    // Nếu trạng thái là 'S7' và có dữ liệu orderDetail được cung cấp
+    console.log("Updated rows:", updatedRows);
     if (
-      data.statusId === "S7" &&
-      data.dataOrder &&
-      data.dataOrder.orderDetail &&
-      data.dataOrder.orderDetail.length > 0
+      statusId === "S7" &&
+      dataOrder &&
+      dataOrder.orderDetail &&
+      dataOrder.orderDetail.length > 0
     ) {
-      for (let i = 0; i < data.dataOrder.orderDetail.length; i++) {
+      for (let i = 0; i < dataOrder.orderDetail.length; i++) {
         let productSize = await db.ProductSize.findOne({
-          where: { id: data.dataOrder.orderDetail[i].productSize.id },
+          where: { id: dataOrder.orderDetail[i].productSize.id },
         });
 
         if (!productSize) {
           return notFound(
-            `ProductSize for id ${data.dataOrder.orderDetail[i].productSize.id}.`
+            `ProductSize for id ${dataOrder.orderDetail[i].productSize.id}.`
           );
         }
-
-        // Cập nhật số lượng tồn kho của sản phẩm
-        productSize.stock += data.dataOrder.orderDetail[i].quantity;
+        productSize.stock += dataOrder.orderDetail[i].quantity;
         await productSize.save();
       }
     }
-
     return successResponse("Updated status order");
   } catch (error) {
     return errorResponse(error.message);
@@ -295,15 +268,14 @@ const updateStatusOrder = async (data) => {
 const getAllOrdersByUser = async (userId) => {
   try {
     if (!userId) {
-      errorResponse("userId is required!");
+      return missingRequiredParams("userId");
     }
-
-    let addressUsers = await db.AddressUser.findAll({
+    const addressUsers = await db.AddressUser.findAll({
       where: { userId: userId },
     });
-
+    const result = [];
     for (let i = 0; i < addressUsers.length; i++) {
-      let orders = await db.Order.findAll({
+      const orders = await db.Order.findAll({
         where: { addressUserId: addressUsers[i].id },
         include: [
           { model: db.TypeShip, as: "typeShipData" },
@@ -313,19 +285,17 @@ const getAllOrdersByUser = async (userId) => {
         raw: true,
         nest: true,
       });
-
       for (let j = 0; j < orders.length; j++) {
         orders[j].voucherData.typeVoucherOfVoucherData =
           await db.TypeVoucher.findOne({
             where: { id: orders[j].voucherData.typeVoucherId },
           });
 
-        let orderDetail = await db.OrderDetail.findAll({
+        const orderDetail = await db.OrderDetail.findAll({
           where: { orderId: orders[j].id },
         });
-
         for (let k = 0; k < orderDetail.length; k++) {
-          let productSize = await db.ProductSize.findOne({
+          const productSize = await db.ProductSize.findOne({
             where: { id: orderDetail[k].productId },
             include: [{ model: db.AllCode, as: "productSizeData" }],
             raw: true,
@@ -333,25 +303,16 @@ const getAllOrdersByUser = async (userId) => {
           });
 
           orderDetail[k].productSize = productSize;
-
           orderDetail[k].productDetail = await db.ProductDetail.findOne({
             where: { id: productSize.productDetailId },
           });
-
           orderDetail[k].product = await db.Product.findOne({
             where: { id: orderDetail[k].productDetail.productId },
           });
 
-          let productImages = await db.ProductImage.findAll({
+          const productImages = await db.ProductImage.findAll({
             where: { productDetailId: orderDetail[k].productDetail.id },
           });
-
-          for (let f = 0; f < productImages.length; f++) {
-            productImages[f].image = Buffer.from(
-              productImages[f].image,
-              "base64"
-            ).toString("binary");
-          }
 
           orderDetail[k].productImage = productImages;
         }
@@ -359,125 +320,238 @@ const getAllOrdersByUser = async (userId) => {
         orders[j].orderDetail = orderDetail;
       }
 
-      addressUsers[i].order = orders;
+      result.push({ addressUser: addressUsers[i], orders: orders });
     }
 
     return {
-      result: [addressUsers],
+      result: result,
       errCode: 0,
-      errors: ["Retrieved all order by user successfully!"],
+      errors: ["Retrieved all orders by user successfully!"],
     };
   } catch (error) {
-    console.log("Errors", error);
-    errorResponse("Error from server!");
-  }
-};
-
-const getAllOrdersByShipper = async (data) => {
-  try {
-    if (!data.shipperId) {
-      return errorResponse("shipperId is required!");
-    }
-
-    let objectFilter = {
-      include: [
-        { model: db.TypeShip, as: "typeShipData" },
-        { model: db.Voucher, as: "voucherData" },
-        { model: db.AllCode, as: "statusOrderData" },
-      ],
-      order: [["createdAt", "DESC"]],
-      raw: true,
-      nest: true,
-      where: { shipperId: data.shipperId },
-    };
-
-    if (data.status === "working") {
-      objectFilter.where = { ...objectFilter.where, statusId: "S5" };
-    } else if (data.status === "done") {
-      objectFilter.where = { ...objectFilter.where, statusId: "S6" };
-    }
-
-    let orders = await db.Order.findAll(objectFilter);
-
-    for (let i = 0; i < orders.length; i++) {
-      let addressUser = await db.AddressUser.findOne({
-        where: { id: orders[i].addressUserId },
-      });
-
-      if (addressUser) {
-        let user = await db.User.findOne({ where: { id: addressUser.userId } });
-
-        orders[i].userData = user;
-        orders[i].addressUser = addressUser;
-      }
-    }
-
-    return {
-      result: [orders],
-      errCode: 200,
-      errors: ["Retrieved all order by shipper successfully!"],
-    };
-  } catch (error) {
+    console.error("Errors", error);
     return errorResponse(error.message);
   }
 };
 
+// const paymentOrder = async (data) => {
+//   try {
+//     if (!data) {
+//       return missingRequiredParams("data");
+//     }
+
+//     let listItem = [];
+//     let totalPriceProduct = 0;
+//     const exchangeRate = EXCHANGE_RATES.VND_to_USD;
+
+//     for (const resultItem of data.result) {
+//       const productSize = await db.ProductSize.findOne({
+//         where: { id: resultItem.productId },
+//         include: [{ model: db.AllCode, as: "productSizeData" }],
+//         raw: true,
+//         nest: true,
+//       });
+
+//       if (!productSize) {
+//         continue;
+//       }
+
+//       const productDetail = await db.ProductDetail.findOne({
+//         where: { id: productSize.productDetailId },
+//       });
+
+//       if (!productDetail) {
+//         continue;
+//       }
+
+//       const product = await db.Product.findOne({
+//         where: { id: productDetail.productId },
+//       });
+
+//       // Convert product price from VND to USD
+//       const realPriceUSD = parseFloat(
+//         (resultItem.realPrice / exchangeRate).toFixed(2)
+//       );
+
+//       if (isNaN(realPriceUSD) || realPriceUSD <= 0) {
+//         throw new Error(`Invalid product price: ${resultItem.realPrice}`);
+//       }
+
+//       listItem.push({
+//         name: `${product.name} | ${productDetail.color} | ${productSize.productSizeData.value}`,
+//         sku: `${resultItem.productId}`,
+//         price: `${realPriceUSD}`,
+//         currency: "USD",
+//         quantity: resultItem.quantity,
+//       });
+
+//       // Calculate the total value of the product
+//       totalPriceProduct += realPriceUSD * resultItem.quantity;
+//     }
+
+//     // Calculate shipping fees and voucher discounts
+//     const shippingAndVoucherPriceUSD = parseFloat(
+//       (data.total - totalPriceProduct) / exchangeRate
+//     ).toFixed(2);
+
+//     if (isNaN(shippingAndVoucherPriceUSD) || shippingAndVoucherPriceUSD <= 0) {
+//       throw new Error(`Invalid shipping and voucher price: ${data.total}`);
+//     }
+
+//     listItem.push({
+//       name: "Phi ship + Voucher",
+//       sku: "1",
+//       price: `${shippingAndVoucherPriceUSD}`,
+//       currency: "USD",
+//       quantity: 1,
+//     });
+
+//     // Calculate the total amount
+//     const totalUSD = data.total
+//       ? parseFloat(data.total / exchangeRate).toFixed(2)
+//       : parseFloat(
+//           (totalPriceProduct + parseFloat(shippingAndVoucherPriceUSD)) /
+//             exchangeRate
+//         ).toFixed(2);
+
+//     const createPaymentJson = {
+//       intent: "sale",
+//       payer: {
+//         payment_method: "paypal",
+//       },
+//       redirect_urls: {
+//         return_url: `http://localhost:8000/payment/success`,
+//         cancel_url: "http://localhost:8000/payment/cancel",
+//       },
+//       transactions: [
+//         {
+//           item_list: {
+//             items: listItem,
+//           },
+//           amount: {
+//             currency: "USD",
+//             total: totalUSD,
+//           },
+//           description: "This is the payment description.",
+//         },
+//       ],
+//     };
+
+//     const payment = await new Promise((resolve, reject) => {
+//       paypal.payment.create(createPaymentJson, (error, payment) => {
+//         if (error) {
+//           reject(error);
+//         } else {
+//           resolve(payment);
+//         }
+//       });
+//     });
+
+//     return {
+//       result: [{ link: payment.links[1].href }],
+//       statusCode: 200,
+//       errors: ["success"],
+//     };
+//   } catch (error) {
+//     console.error("Error:", error);
+//     return errorResponse(error.message);
+//   }
+// };
+
 const paymentOrder = async (data) => {
   try {
+    if (!data || !data.result || !data.total) {
+      return missingRequiredParams("data, result, and total");
+    }
+
     let listItem = [];
     let totalPriceProduct = 0;
+    const exchangeRate = EXCHANGE_RATES.VND_to_USD;
 
-    for (let i = 0; i < data.result.length; i++) {
+    for (const resultItem of data.result) {
       const productSize = await db.ProductSize.findOne({
-        where: { id: data.result[i].productId },
+        where: { id: resultItem.productId },
         include: [{ model: db.AllCode, as: "productSizeData" }],
         raw: true,
         nest: true,
       });
 
+      if (!productSize) {
+        continue;
+      }
+
       const productDetail = await db.ProductDetail.findOne({
         where: { id: productSize.productDetailId },
       });
+
+      if (!productDetail) {
+        continue;
+      }
 
       const product = await db.Product.findOne({
         where: { id: productDetail.productId },
       });
 
-      const realPrice = parseFloat(
-        (data.result[i].realPrice / EXCHANGE_RATES.USD).toFixed(2)
+      // Convert product price from VND to USD
+      const realPriceUSD = parseFloat(
+        (resultItem.realPrice / exchangeRate).toFixed(2)
       );
 
-      console.log(realPrice);
-      console.log(data.total);
+      if (isNaN(realPriceUSD) || realPriceUSD <= 0) {
+        console.error(`Invalid product price: ${resultItem.realPrice}`);
+        continue; // Skip this product and continue to the next one
+      }
 
       listItem.push({
-        name: `${product.name} | ${productDetail.nameDetail} | ${productSize.sizeData.value}`,
-        sku: `${data.result[i].productId}`,
-        price: `${realPrice}`,
+        name: `${product.name} | ${productDetail.color} | ${productSize.productSizeData.value}`,
+        sku: `${resultItem.productId}`,
+        price: `${realPriceUSD}`,
         currency: "USD",
-        quantity: data.result[i].quantity,
+        quantity: resultItem.quantity,
       });
 
-      totalPriceProduct += realPrice * data.result[i].quantity;
-      console.log(data.total - totalPriceProduct);
+      // Calculate the total value of the product
+      totalPriceProduct += realPriceUSD * resultItem.quantity;
+    }
+
+    // Calculate shipping fees and voucher discounts
+    const shippingAndVoucherPriceUSD = parseFloat(
+      (data.total - totalPriceProduct) / exchangeRate
+    ).toFixed(2);
+
+    if (isNaN(shippingAndVoucherPriceUSD) || shippingAndVoucherPriceUSD < 0) {
+      console.error(`Invalid shipping and voucher price: ${data.total}`);
+      return {
+        result: [],
+        statusCode: 500,
+        errors: [`Invalid shipping and voucher price: ${data.total}`],
+      };
     }
 
     listItem.push({
       name: "Phi ship + Voucher",
       sku: "1",
-      price: `${parseFloat(data.total - totalPriceProduct).toFixed(2)}`,
+      price: `${shippingAndVoucherPriceUSD}`,
       currency: "USD",
       quantity: 1,
     });
 
-    const create_payment_json = {
+    // Calculate the total amount
+    const totalUSD = data.total
+      ? parseFloat(data.total / exchangeRate).toFixed(2)
+      : parseFloat(
+          (totalPriceProduct + parseFloat(shippingAndVoucherPriceUSD)) /
+            exchangeRate
+        ).toFixed(2);
+
+    const createPaymentJson = {
       intent: "sale",
       payer: {
         payment_method: "paypal",
       },
       redirect_urls: {
-        return_url: `http://localhost:5000/payment/success`,
-        cancel_url: "http://localhost:5000/payment/cancel",
+        return_url: `http://localhost:8000/payment/success`,
+        cancel_url: "http://localhost:8000/payment/cancel",
       },
       transactions: [
         {
@@ -486,20 +560,50 @@ const paymentOrder = async (data) => {
           },
           amount: {
             currency: "USD",
-            total: data.total,
+            total: totalUSD,
           },
           description: "This is the payment description.",
         },
       ],
     };
 
-    paypal.payment.create(create_payment_json, (error, payment) => {
-      if (error) {
-        resolve(errorResponse(error));
-      } else {
-        resolve(successResponse({ link: payment.links[1].href }));
-      }
+    const payment = await new Promise((resolve, reject) => {
+      paypal.payment.create(createPaymentJson, (error, payment) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(payment);
+        }
+      });
     });
+
+    return {
+      result: [{ link: payment.links[1].href }],
+      statusCode: 200,
+      errors: ["success"],
+    };
+  } catch (error) {
+    console.error("Error:", error);
+    return errorResponse(error.message);
+  }
+};
+
+const confirmOrder = async (data) => {
+  try {
+    if (!data.shipperId || !data.orderId || !data.statusId) {
+      return errorResponse("Missing required parameter !");
+    }
+
+    const Order = await db.Order.findOne({
+      where: { id: data.orderId },
+      raw: false,
+    });
+
+    Order.shipperId = data.shipperId;
+    Order.statusId = data.statusId;
+    await Order.save();
+
+    return successResponse("ok");
   } catch (error) {
     return errorResponse(error);
   }
@@ -598,27 +702,209 @@ const paymentOrderSuccess = async (data) => {
   }
 };
 
-const confirmOrder = async (data) => {
-  try {
-    if (!data.shipperId || !data.orderId || !data.statusId) {
-      return errorResponse("Missing required parameter !");
+let paymentOrderVNPay = (req) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      var ipAddr =
+        req.headers["x-forwarded-for"] ||
+        req.connection.remoteAddress ||
+        req.socket.remoteAddress ||
+        req.connection.socket.remoteAddress;
+
+      var tmnCode = process.env.VNP_TMNCODE;
+      var secretKey = process.env.VNP_HASHSECRET;
+      var vnpUrl = process.env.VNP_URL;
+      var returnUrl = process.env.VNP_RETURNURL;
+
+      var createDate = process.env.DATE_VNPAYMENT;
+      var orderId = uuidv4();
+
+      console.log("createDate", createDate);
+      console.log("orderId", orderId);
+      var amount = req.body.amount;
+      var bankCode = req.body.bankCode;
+
+      var orderInfo = req.body.orderDescription;
+      var orderType = req.body.orderType;
+      var locale = req.body.language;
+      if (locale === null || locale === "") {
+        locale = "vn";
+      }
+      var currCode = "VND";
+      var vnp_Params = {};
+      vnp_Params["vnp_Version"] = "2.1.0";
+      vnp_Params["vnp_Command"] = "pay";
+      vnp_Params["vnp_TmnCode"] = tmnCode;
+      // vnp_Params['vnp_Merchant'] = ''
+      vnp_Params["vnp_Locale"] = locale;
+      vnp_Params["vnp_CurrCode"] = currCode;
+      vnp_Params["vnp_TxnRef"] = orderId;
+      vnp_Params["vnp_OrderInfo"] = orderInfo;
+      vnp_Params["vnp_OrderType"] = orderType;
+      vnp_Params["vnp_Amount"] = amount * 100;
+      vnp_Params["vnp_ReturnUrl"] = returnUrl;
+      vnp_Params["vnp_IpAddr"] = ipAddr;
+      vnp_Params["vnp_CreateDate"] = createDate;
+      if (bankCode !== null && bankCode !== "") {
+        vnp_Params["vnp_BankCode"] = bankCode;
+      }
+
+      vnp_Params = sortObject(vnp_Params);
+
+      var signData = querystring.stringify(vnp_Params, { encode: false });
+
+      var hmac = crypto.createHmac("sha512", secretKey);
+      var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+      vnp_Params["vnp_SecureHash"] = signed;
+
+      vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
+      console.log(vnpUrl);
+      resolve({
+        errCode: 200,
+        link: vnpUrl,
+      });
+    } catch (error) {
+      reject(error);
     }
-
-    const Order = await db.Order.findOne({
-      where: { id: data.orderId },
-      raw: false,
-    });
-
-    Order.shipperId = data.shipperId;
-    Order.statusId = data.statusId;
-    await Order.save();
-
-    return successResponse("ok");
-  } catch (error) {
-    return errorResponse(error);
-  }
+  });
 };
 
+let confirmOrderVNPay = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      var vnp_Params = data;
+
+      var secureHash = vnp_Params["vnp_SecureHash"];
+
+      delete vnp_Params["vnp_SecureHash"];
+      delete vnp_Params["vnp_SecureHashType"];
+
+      vnp_Params = sortObject(vnp_Params);
+
+      var tmnCode = process.env.VNP_TMNCODE;
+      var secretKey = process.env.VNP_HASHSECRET;
+
+      var signData = querystring.stringify(vnp_Params, { encode: false });
+
+      var hmac = crypto.createHmac("sha512", secretKey);
+      var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+
+      if (secureHash === signed) {
+        resolve({
+          errCode: 0,
+          errMessage: "Success",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "failed",
+        });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+let paymentOrderVNPaySuccess = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let product = await db.OrderProduct.create({
+        addressUserId: data.addressUserId,
+        isPaymentOnline: data.isPaymentOnline,
+        statusId: "S3",
+        typeShipId: data.typeShipId,
+        voucherId: data.voucherId,
+        note: data.note,
+      });
+
+      data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
+        item.orderId = product.dataValues.id;
+        return item;
+      });
+
+      await db.OrderDetail.bulkCreate(data.arrDataShopCart);
+      let res = await db.ShopCart.findOne({
+        where: { userId: data.userId, statusId: 0 },
+      });
+      if (res) {
+        await db.ShopCart.destroy({
+          where: { userId: data.userId },
+        });
+        for (let i = 0; i < data.arrDataShopCart.length; i++) {
+          let productDetailSize = await db.ProductDetailSize.findOne({
+            where: { id: data.arrDataShopCart[i].productId },
+            raw: false,
+          });
+          productDetailSize.stock =
+            productDetailSize.stock - data.arrDataShopCart[i].quantity;
+          await productDetailSize.save();
+        }
+      }
+      if (data.voucherId && data.userId) {
+        let voucherUses = await db.VoucherUsed.findOne({
+          where: {
+            voucherId: data.voucherId,
+            userId: data.userId,
+          },
+          raw: false,
+        });
+        voucherUses.status = 1;
+        await voucherUses.save();
+      }
+      resolve({
+        errCode: 0,
+        errMessage: "ok",
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+const getAllOrdersByShipper = async (shipperId, status) => {
+  try {
+    if (!shipperId) {
+      return errorResponse("shipperId is required!");
+    }
+    let objectFilter = {
+      include: [
+        { model: db.TypeShip, as: "typeShipData" },
+        { model: db.Voucher, as: "voucherData" },
+        { model: db.AllCode, as: "statusOrderData" },
+      ],
+      order: [["createdAt", "DESC"]],
+      raw: true,
+      nest: true,
+      where: { shipperId: shipperId },
+    };
+    if (status === "working") {
+      objectFilter.where = { ...objectFilter.where, statusId: "S5" };
+    } else if (status === "done") {
+      objectFilter.where = { ...objectFilter.where, statusId: "S6" };
+    }
+    const orders = await db.Order.findAll(objectFilter);
+    for (let i = 0; i < orders.length; i++) {
+      const addressUser = await db.AddressUser.findOne({
+        where: { id: orders[i].addressUserId },
+      });
+      if (addressUser) {
+        const user = await db.User.findOne({
+          where: { id: addressUser.userId },
+        });
+        orders[i].userData = user;
+        orders[i].addressUser = addressUser;
+      }
+    }
+    return {
+      result: orders,
+      errCode: 200,
+      errors: ["Retrieved all orders by shipper successfully!"],
+    };
+  } catch (error) {
+    return errorResponse(error.message);
+  }
+};
 export default {
   createOrder,
   getAllOrders,
@@ -626,7 +912,10 @@ export default {
   updateStatusOrder,
   getAllOrdersByUser,
   paymentOrder,
-  paymentOrderSuccess,
   confirmOrder,
+  paymentOrderSuccess,
+  paymentOrderVNPay,
+  confirmOrderVNPay,
+  paymentOrderVNPaySuccess,
   getAllOrdersByShipper,
 };

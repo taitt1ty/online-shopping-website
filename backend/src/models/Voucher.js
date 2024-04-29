@@ -13,10 +13,10 @@ module.exports = (sequelize, DataTypes) => {
         targetKey: "id",
         as: "typeVoucherOfVoucherData",
       });
-      // Voucher.hasMany(models.Order, {
-      //   foreignKey: "voucherId",
-      //   as: "voucherData",
-      // });
+      Voucher.hasMany(models.Order, {
+        foreignKey: "voucherId",
+        as: "voucherData",
+      });
     }
   }
   Voucher.init(

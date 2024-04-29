@@ -316,6 +316,10 @@ const webRoutes = (app) => {
     "/api/order/get-all-by-user",
     middlewareControllers.verifyTokenUser,
     orderController.getAllOrdersByUser
+  );  
+  router.get(
+    "/api/order/get-all-by-shipper",
+    orderController.getAllOrdersByShipper
   );
   router.post(
     "/api/order/payment",
@@ -333,10 +337,7 @@ const webRoutes = (app) => {
   //   orderController.paymentOrderVnpaySuccess
   // );
   router.put("/api/order/confirm", orderController.confirmOrder);
-  router.get(
-    "/api/order/get-all-by-shipper",
-    orderController.getAllOrdersByShipper
-  );
+
   // router.post(
   //   "/api/order/payment-vnpay",
   //   middlewareControllers.verifyTokenUser,
