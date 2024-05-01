@@ -61,16 +61,6 @@ const paymentOrder = async (req, res) => {
   }
 };
 
-const confirmOrder = async (req, res) => {
-  try {
-    const data = await orderService.confirmOrder(req.body);
-    return res.status(200).json(data);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json(errorResponse("Error from server"));
-  }
-};
-
 const paymentOrderSuccess = async (req, res) => {
   try {
     const data = await orderService.paymentOrderSuccess(req.body);
@@ -111,6 +101,16 @@ const paymentOrderVNPaySuccess = async (req, res) => {
   }
 };
 
+const confirmOrder = async (req, res) => {
+  try {
+    const data = await orderService.confirmOrder(req.body);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
+};
+
 const getAllOrdersByShipper = async (req, res) => {
   try {
     const data = await orderService.getAllOrdersByShipper(req.query);
@@ -121,15 +121,15 @@ const getAllOrdersByShipper = async (req, res) => {
   }
 };
 
-// const updateImageOrder = async (req, res) => {
-//     try {
-//         const data = await orderService.updateImageOrder(req.body);
-//         return res.status(200).json(data);
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).json(errorResponse('Error from server'));
-//     }
-// };
+const updateImageOrder = async (req, res) => {
+  try {
+    const data = await orderService.updateImageOrder(req.body);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
+};
 
 export default {
   createOrder,
@@ -144,5 +144,5 @@ export default {
   confirmOrderVNPay,
   paymentOrderVNPaySuccess,
   getAllOrdersByShipper,
-  // updateImageOrder
+  updateImageOrder,
 };

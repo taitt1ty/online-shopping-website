@@ -221,7 +221,7 @@ const getVoucherById = async (id) => {
 
     return {
       result: voucher,
-      errCode: 200,
+      statusCode: 200,
       errors: [`Retrieved voucher ${id} successfully!`],
     };
   } catch (error) {
@@ -419,7 +419,7 @@ const getVoucherByUserId = async (data) => {
 
     return {
       result: vouchers.rows,
-      errCode: 200,
+      statusCode: 200,
       errors: ["Retrieved all vouchers by user id successfully!"],
     };
   } catch (error) {

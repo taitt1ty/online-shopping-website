@@ -7,7 +7,7 @@ const handleRequest = async (handler, req, res) => {
     if (!data) {
       return res.status(500).json(errorResponse());
     }
-    const statusCode = data.errCode === 0 ? 200 : 500;
+    const statusCode = data.statusCode === 0 ? 200 : 500;
     return res.status(statusCode).json(data);
   } catch (error) {
     console.error(error);

@@ -15,14 +15,14 @@ import {
   notFound,
 } from "../utils/ResponseUtils";
 
-moment.updateLocale("vi", localization);
-paypal.configure({
-  mode: "sandbox",
-  client_id:
-    "AaeuRt8WCq9SBliEVfEyXXQMosfJD-U9emlCflqe8Blz_KWZ3lnXh1piEMcXuo78MvWj0hBKgLN-FamT",
-  client_secret:
-    "ENWZDMzk17X3mHFJli7sFlS9RT1Vi_aocaLsrftWZ2tjHtBVFMzr4kPf5_9iIcsbFWsHf95vXVi6EADv",
-});
+// moment.updateLocale("vi", localization);
+// paypal.configure({
+//   mode: "sandbox",
+//   client_id:
+//     "AaeuRt8WCq9SBliEVfEyXXQMosfJD-U9emlCflqe8Blz_KWZ3lnXh1piEMcXuo78MvWj0hBKgLN-FamT",
+//   client_secret:
+//     "ENWZDMzk17X3mHFJli7sFlS9RT1Vi_aocaLsrftWZ2tjHtBVFMzr4kPf5_9iIcsbFWsHf95vXVi6EADv",
+// });
 
 const createOrder = async (data) => {
   try {
@@ -107,7 +107,7 @@ const getAllOrders = async (data) => {
     if (rows.length === 0) {
       return {
         result: [],
-        errCode: 0,
+        statusCode: 0,
         errors: ["No orders found!"],
       };
     }
@@ -128,7 +128,7 @@ const getAllOrders = async (data) => {
 
     return {
       result: rows,
-      errCode: 0,
+      statusCode: 0,
       errors: ["Retrieved all order successfully!"],
     };
   } catch (error) {
@@ -214,7 +214,7 @@ const getOrderById = async (id) => {
     order.userData = user;
     return {
       result: [order],
-      errCode: 200,
+      statusCode: 200,
       errors: [`Retrieved order ${id} successfully!`],
     };
   } catch (error) {
@@ -325,7 +325,7 @@ const getAllOrdersByUser = async (userId) => {
 
     return {
       result: result,
-      errCode: 0,
+      statusCode: 0,
       errors: ["Retrieved all orders by user successfully!"],
     };
   } catch (error) {
@@ -334,254 +334,153 @@ const getAllOrdersByUser = async (userId) => {
   }
 };
 
-// const paymentOrder = async (data) => {
-//   try {
-//     if (!data) {
-//       return missingRequiredParams("data");
-//     }
-
-//     let listItem = [];
-//     let totalPriceProduct = 0;
-//     const exchangeRate = EXCHANGE_RATES.VND_to_USD;
-
-//     for (const resultItem of data.result) {
-//       const productSize = await db.ProductSize.findOne({
-//         where: { id: resultItem.productId },
-//         include: [{ model: db.AllCode, as: "productSizeData" }],
-//         raw: true,
-//         nest: true,
-//       });
-
-//       if (!productSize) {
-//         continue;
-//       }
-
-//       const productDetail = await db.ProductDetail.findOne({
-//         where: { id: productSize.productDetailId },
-//       });
-
-//       if (!productDetail) {
-//         continue;
-//       }
-
-//       const product = await db.Product.findOne({
-//         where: { id: productDetail.productId },
-//       });
-
-//       // Convert product price from VND to USD
-//       const realPriceUSD = parseFloat(
-//         (resultItem.realPrice / exchangeRate).toFixed(2)
-//       );
-
-//       if (isNaN(realPriceUSD) || realPriceUSD <= 0) {
-//         throw new Error(`Invalid product price: ${resultItem.realPrice}`);
-//       }
-
-//       listItem.push({
-//         name: `${product.name} | ${productDetail.color} | ${productSize.productSizeData.value}`,
-//         sku: `${resultItem.productId}`,
-//         price: `${realPriceUSD}`,
-//         currency: "USD",
-//         quantity: resultItem.quantity,
-//       });
-
-//       // Calculate the total value of the product
-//       totalPriceProduct += realPriceUSD * resultItem.quantity;
-//     }
-
-//     // Calculate shipping fees and voucher discounts
-//     const shippingAndVoucherPriceUSD = parseFloat(
-//       (data.total - totalPriceProduct) / exchangeRate
-//     ).toFixed(2);
-
-//     if (isNaN(shippingAndVoucherPriceUSD) || shippingAndVoucherPriceUSD <= 0) {
-//       throw new Error(`Invalid shipping and voucher price: ${data.total}`);
-//     }
-
-//     listItem.push({
-//       name: "Phi ship + Voucher",
-//       sku: "1",
-//       price: `${shippingAndVoucherPriceUSD}`,
-//       currency: "USD",
-//       quantity: 1,
-//     });
-
-//     // Calculate the total amount
-//     const totalUSD = data.total
-//       ? parseFloat(data.total / exchangeRate).toFixed(2)
-//       : parseFloat(
-//           (totalPriceProduct + parseFloat(shippingAndVoucherPriceUSD)) /
-//             exchangeRate
-//         ).toFixed(2);
-
-//     const createPaymentJson = {
-//       intent: "sale",
-//       payer: {
-//         payment_method: "paypal",
-//       },
-//       redirect_urls: {
-//         return_url: `http://localhost:8000/payment/success`,
-//         cancel_url: "http://localhost:8000/payment/cancel",
-//       },
-//       transactions: [
-//         {
-//           item_list: {
-//             items: listItem,
-//           },
-//           amount: {
-//             currency: "USD",
-//             total: totalUSD,
-//           },
-//           description: "This is the payment description.",
-//         },
-//       ],
-//     };
-
-//     const payment = await new Promise((resolve, reject) => {
-//       paypal.payment.create(createPaymentJson, (error, payment) => {
-//         if (error) {
-//           reject(error);
-//         } else {
-//           resolve(payment);
-//         }
-//       });
-//     });
-
-//     return {
-//       result: [{ link: payment.links[1].href }],
-//       statusCode: 200,
-//       errors: ["success"],
-//     };
-//   } catch (error) {
-//     console.error("Error:", error);
-//     return errorResponse(error.message);
-//   }
-// };
-
-const paymentOrder = async (data) => {
+const paymentOrderVNPay = async (req) => {
   try {
-    if (!data || !data.result || !data.total) {
-      return missingRequiredParams("data, result, and total");
+    var ipAddr =
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      req.connection.socket.remoteAddress;
+
+    var tmnCode = process.env.VNP_TMNCODE;
+    var secretKey = process.env.VNP_HASHSECRET;
+    var vnpUrl = process.env.VNP_URL;
+    var returnUrl = process.env.VNP_RETURNURL;
+
+    var createDate = process.env.DATE_VNPAYMENT;
+    var orderId = uuidv4();
+
+    console.log("createDate", createDate);
+    console.log("orderId", orderId);
+    var amount = req.body.amount;
+    var bankCode = req.body.bankCode;
+    var orderInfo = req.body.orderDescription;
+    var orderType = req.body.orderType;
+    var locale = req.body.language;
+    if (locale === null || locale === "") {
+      locale = "vn";
+    }
+    var currCode = "VND";
+    var vnp_Params = {};
+    vnp_Params["vnp_Version"] = "2.1.0";
+    vnp_Params["vnp_Command"] = "pay";
+    vnp_Params["vnp_TmnCode"] = tmnCode;
+    // vnp_Params['vnp_Merchant'] = ''
+    vnp_Params["vnp_Locale"] = locale;
+    vnp_Params["vnp_CurrCode"] = currCode;
+    vnp_Params["vnp_TxnRef"] = orderId;
+    vnp_Params["vnp_OrderInfo"] = orderInfo;
+    vnp_Params["vnp_OrderType"] = orderType;
+    vnp_Params["vnp_Amount"] = amount * 100;
+    vnp_Params["vnp_ReturnUrl"] = returnUrl;
+    vnp_Params["vnp_IpAddr"] = ipAddr;
+    vnp_Params["vnp_CreateDate"] = createDate;
+    if (bankCode !== null && bankCode !== "") {
+      vnp_Params["vnp_BankCode"] = bankCode;
     }
 
-    let listItem = [];
-    let totalPriceProduct = 0;
-    const exchangeRate = EXCHANGE_RATES.VND_to_USD;
+    vnp_Params = sortObject(vnp_Params);
 
-    for (const resultItem of data.result) {
-      const productSize = await db.ProductSize.findOne({
-        where: { id: resultItem.productId },
-        include: [{ model: db.AllCode, as: "productSizeData" }],
-        raw: true,
-        nest: true,
-      });
+    var signData = querystring.stringify(vnp_Params, { encode: false });
+    var hmac = crypto.createHmac("sha512", secretKey);
+    var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+    console.log("vnp_SecureHash", signed);
+    vnp_Params["vnp_SecureHash"] = signed;
+    vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
+    console.log(vnpUrl);
+    return {
+      result: [vnpUrl],
+      statusCode: 200,
+      errors: ["Success!"],
+    };
+  } catch (error) {
+    console.error("Error:", error);
+    return errorResponse(error.message);
+  }
+};
 
-      if (!productSize) {
-        continue;
-      }
+const confirmOrderVNPay = async (data) => {
+  try {
+    var vnp_Params = data;
+    var secureHash = vnp_Params["vnp_SecureHash"];
+    console.log("secureHash", secureHash);
+    delete vnp_Params["vnp_SecureHash"];
+    delete vnp_Params["vnp_SecureHashType"];
 
-      const productDetail = await db.ProductDetail.findOne({
-        where: { id: productSize.productDetailId },
-      });
+    vnp_Params = sortObject(vnp_Params);
 
-      if (!productDetail) {
-        continue;
-      }
+    var tmnCode = process.env.VNP_TMNCODE;
+    var secretKey = process.env.VNP_HASHSECRET;
 
-      const product = await db.Product.findOne({
-        where: { id: productDetail.productId },
-      });
-
-      // Convert product price from VND to USD
-      const realPriceUSD = parseFloat(
-        (resultItem.realPrice / exchangeRate).toFixed(2)
-      );
-
-      if (isNaN(realPriceUSD) || realPriceUSD <= 0) {
-        console.error(`Invalid product price: ${resultItem.realPrice}`);
-        continue; // Skip this product and continue to the next one
-      }
-
-      listItem.push({
-        name: `${product.name} | ${productDetail.color} | ${productSize.productSizeData.value}`,
-        sku: `${resultItem.productId}`,
-        price: `${realPriceUSD}`,
-        currency: "USD",
-        quantity: resultItem.quantity,
-      });
-
-      // Calculate the total value of the product
-      totalPriceProduct += realPriceUSD * resultItem.quantity;
-    }
-
-    // Calculate shipping fees and voucher discounts
-    const shippingAndVoucherPriceUSD = parseFloat(
-      (data.total - totalPriceProduct) / exchangeRate
-    ).toFixed(2);
-
-    if (isNaN(shippingAndVoucherPriceUSD) || shippingAndVoucherPriceUSD < 0) {
-      console.error(`Invalid shipping and voucher price: ${data.total}`);
+    var signData = querystring.stringify(vnp_Params, { encode: false });
+    var hmac = crypto.createHmac("sha512", secretKey);
+    var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+    console.log("signed", signed);
+    if (secureHash === signed) {
+      return {
+        result: [{ code: vnp_Params["vnp_ResponseCode"] }],
+        statusCode: 0,
+        errors: ["Success"],
+      };
+    } else {
       return {
         result: [],
-        statusCode: 500,
-        errors: [`Invalid shipping and voucher price: ${data.total}`],
+        statusCode: 1,
+        errors: ["Failed payment by VNPay"],
       };
     }
+  } catch (error) {
+    console.error("Error:", error);
+    return errorResponse(error.message);
+  }
+};
 
-    listItem.push({
-      name: "Phi ship + Voucher",
-      sku: "1",
-      price: `${shippingAndVoucherPriceUSD}`,
-      currency: "USD",
-      quantity: 1,
+const paymentOrderVNPaySuccess = async (data) => {
+  try {
+    let product = await db.Order.create({
+      addressUserId: data.addressUserId,
+      isPaymentOnline: data.isPaymentOnline,
+      statusId: "S3",
+      typeShipId: data.typeShipId,
+      voucherId: data.voucherId,
+      note: data.note,
     });
 
-    // Calculate the total amount
-    const totalUSD = data.total
-      ? parseFloat(data.total / exchangeRate).toFixed(2)
-      : parseFloat(
-          (totalPriceProduct + parseFloat(shippingAndVoucherPriceUSD)) /
-            exchangeRate
-        ).toFixed(2);
+    data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
+      item.orderId = product.dataValues.id;
+      return item;
+    });
 
-    const createPaymentJson = {
-      intent: "sale",
-      payer: {
-        payment_method: "paypal",
-      },
-      redirect_urls: {
-        return_url: `http://localhost:8000/payment/success`,
-        cancel_url: "http://localhost:8000/payment/cancel",
-      },
-      transactions: [
-        {
-          item_list: {
-            items: listItem,
-          },
-          amount: {
-            currency: "USD",
-            total: totalUSD,
-          },
-          description: "This is the payment description.",
-        },
-      ],
-    };
-
-    const payment = await new Promise((resolve, reject) => {
-      paypal.payment.create(createPaymentJson, (error, payment) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(payment);
-        }
+    await db.OrderDetail.bulkCreate(data.arrDataShopCart);
+    let res = await db.ShopCart.findOne({
+      where: { userId: data.userId, statusId: 0 },
+    });
+    if (res) {
+      await db.ShopCart.destroy({
+        where: { userId: data.userId },
       });
-    });
-
-    return {
-      result: [{ link: payment.links[1].href }],
-      statusCode: 200,
-      errors: ["success"],
-    };
+      for (let i = 0; i < data.arrDataShopCart.length; i++) {
+        let productDetailSize = await db.ProductDetailSize.findOne({
+          where: { id: data.arrDataShopCart[i].productId },
+          raw: false,
+        });
+        productDetailSize.stock =
+          productDetailSize.stock - data.arrDataShopCart[i].quantity;
+        await productDetailSize.save();
+      }
+    }
+    if (data.voucherId && data.userId) {
+      let voucherUses = await db.VoucherUsed.findOne({
+        where: {
+          voucherId: data.voucherId,
+          userId: data.userId,
+        },
+        raw: false,
+      });
+      voucherUses.status = 1;
+      await voucherUses.save();
+    }
+    return successResponse("Payment by VNPay");
   } catch (error) {
     console.error("Error:", error);
     return errorResponse(error.message);
@@ -607,259 +506,6 @@ const confirmOrder = async (data) => {
   } catch (error) {
     return errorResponse(error);
   }
-};
-
-const paymentOrderSuccess = async (data) => {
-  try {
-    if (!data.PayerID || !data.paymentId || !data.token) {
-      return {
-        errCode: 1,
-        errMessage: "Missing required parameter !",
-      };
-    }
-
-    const execute_payment_json = {
-      payer_id: data.PayerID,
-      transactions: [
-        {
-          amount: {
-            currency: "USD",
-            total: data.total,
-          },
-        },
-      ],
-    };
-
-    const paymentId = data.paymentId;
-
-    const payment = await new Promise((resolve, reject) => {
-      paypal.payment.execute(
-        paymentId,
-        execute_payment_json,
-        (error, payment) => {
-          if (error) {
-            resolve({
-              errCode: 0,
-              errMessage: error,
-            });
-          } else {
-            resolve(payment);
-          }
-        }
-      );
-    });
-
-    const product = await db.Order.create({
-      addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline,
-      statusId: "S3",
-      typeShipId: data.typeShipId,
-      voucherId: data.voucherId,
-      note: data.note,
-    });
-
-    data.arrDataShopCart = data.arrDataShopCart.map((item) => {
-      item.orderId = product.dataValues.id;
-      return item;
-    });
-
-    await db.OrderDetail.bulkCreate(data.arrDataShopCart);
-
-    const res = await db.ShopCart.findOne({
-      where: { userId: data.userId, statusId: 0 },
-    });
-
-    if (res) {
-      await db.ShopCart.destroy({
-        where: { userId: data.userId },
-      });
-      for (let i = 0; i < data.arrDataShopCart.length; i++) {
-        const productSize = await db.ProductSize.findOne({
-          where: { id: data.arrDataShopCart[i].productId },
-          raw: false,
-        });
-        productSize.stock -= data.arrDataShopCart[i].quantity;
-        await productSize.save();
-      }
-    }
-
-    if (data.voucherId && data.userId) {
-      const voucherUses = await db.VoucherUsed.findOne({
-        where: { voucherId: data.voucherId, userId: data.userId },
-        raw: false,
-      });
-      voucherUses.status = 1;
-      await voucherUses.save();
-    }
-
-    return {
-      result: [],
-      errCode: 0,
-      errors: ["Success"],
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-let paymentOrderVNPay = (req) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      var ipAddr =
-        req.headers["x-forwarded-for"] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        req.connection.socket.remoteAddress;
-
-      var tmnCode = process.env.VNP_TMNCODE;
-      var secretKey = process.env.VNP_HASHSECRET;
-      var vnpUrl = process.env.VNP_URL;
-      var returnUrl = process.env.VNP_RETURNURL;
-
-      var createDate = process.env.DATE_VNPAYMENT;
-      var orderId = uuidv4();
-
-      console.log("createDate", createDate);
-      console.log("orderId", orderId);
-      var amount = req.body.amount;
-      var bankCode = req.body.bankCode;
-
-      var orderInfo = req.body.orderDescription;
-      var orderType = req.body.orderType;
-      var locale = req.body.language;
-      if (locale === null || locale === "") {
-        locale = "vn";
-      }
-      var currCode = "VND";
-      var vnp_Params = {};
-      vnp_Params["vnp_Version"] = "2.1.0";
-      vnp_Params["vnp_Command"] = "pay";
-      vnp_Params["vnp_TmnCode"] = tmnCode;
-      // vnp_Params['vnp_Merchant'] = ''
-      vnp_Params["vnp_Locale"] = locale;
-      vnp_Params["vnp_CurrCode"] = currCode;
-      vnp_Params["vnp_TxnRef"] = orderId;
-      vnp_Params["vnp_OrderInfo"] = orderInfo;
-      vnp_Params["vnp_OrderType"] = orderType;
-      vnp_Params["vnp_Amount"] = amount * 100;
-      vnp_Params["vnp_ReturnUrl"] = returnUrl;
-      vnp_Params["vnp_IpAddr"] = ipAddr;
-      vnp_Params["vnp_CreateDate"] = createDate;
-      if (bankCode !== null && bankCode !== "") {
-        vnp_Params["vnp_BankCode"] = bankCode;
-      }
-
-      vnp_Params = sortObject(vnp_Params);
-
-      var signData = querystring.stringify(vnp_Params, { encode: false });
-
-      var hmac = crypto.createHmac("sha512", secretKey);
-      var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
-      vnp_Params["vnp_SecureHash"] = signed;
-
-      vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
-      console.log(vnpUrl);
-      resolve({
-        errCode: 200,
-        link: vnpUrl,
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
-
-let confirmOrderVNPay = (data) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      var vnp_Params = data;
-
-      var secureHash = vnp_Params["vnp_SecureHash"];
-
-      delete vnp_Params["vnp_SecureHash"];
-      delete vnp_Params["vnp_SecureHashType"];
-
-      vnp_Params = sortObject(vnp_Params);
-
-      var tmnCode = process.env.VNP_TMNCODE;
-      var secretKey = process.env.VNP_HASHSECRET;
-
-      var signData = querystring.stringify(vnp_Params, { encode: false });
-
-      var hmac = crypto.createHmac("sha512", secretKey);
-      var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
-
-      if (secureHash === signed) {
-        resolve({
-          errCode: 0,
-          errMessage: "Success",
-        });
-      } else {
-        resolve({
-          errCode: 1,
-          errMessage: "failed",
-        });
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
-
-let paymentOrderVNPaySuccess = (data) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let product = await db.OrderProduct.create({
-        addressUserId: data.addressUserId,
-        isPaymentOnline: data.isPaymentOnline,
-        statusId: "S3",
-        typeShipId: data.typeShipId,
-        voucherId: data.voucherId,
-        note: data.note,
-      });
-
-      data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
-        item.orderId = product.dataValues.id;
-        return item;
-      });
-
-      await db.OrderDetail.bulkCreate(data.arrDataShopCart);
-      let res = await db.ShopCart.findOne({
-        where: { userId: data.userId, statusId: 0 },
-      });
-      if (res) {
-        await db.ShopCart.destroy({
-          where: { userId: data.userId },
-        });
-        for (let i = 0; i < data.arrDataShopCart.length; i++) {
-          let productDetailSize = await db.ProductDetailSize.findOne({
-            where: { id: data.arrDataShopCart[i].productId },
-            raw: false,
-          });
-          productDetailSize.stock =
-            productDetailSize.stock - data.arrDataShopCart[i].quantity;
-          await productDetailSize.save();
-        }
-      }
-      if (data.voucherId && data.userId) {
-        let voucherUses = await db.VoucherUsed.findOne({
-          where: {
-            voucherId: data.voucherId,
-            userId: data.userId,
-          },
-          raw: false,
-        });
-        voucherUses.status = 1;
-        await voucherUses.save();
-      }
-      resolve({
-        errCode: 0,
-        errMessage: "ok",
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
 };
 
 const getAllOrdersByShipper = async (shipperId, status) => {
@@ -898,12 +544,55 @@ const getAllOrdersByShipper = async (shipperId, status) => {
     }
     return {
       result: orders,
-      errCode: 200,
+      statusCode: 200,
       errors: ["Retrieved all orders by shipper successfully!"],
     };
   } catch (error) {
     return errorResponse(error.message);
   }
+};
+
+function sortObject(obj) {
+  var sorted = {};
+  var str = [];
+  var key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
+    }
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  }
+  return sorted;
+}
+
+let updateImageOrder = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.id || !data.image) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter !",
+        });
+      } else {
+        let order = await db.OrderProduct.findOne({
+          where: { id: data.id },
+          raw: false,
+        });
+        order.image = data.image;
+        await order.save();
+
+        resolve({
+          errCode: 0,
+          errMessage: "ok",
+        });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
 };
 export default {
   createOrder,
@@ -911,11 +600,13 @@ export default {
   getOrderById,
   updateStatusOrder,
   getAllOrdersByUser,
-  paymentOrder,
+  // paymentOrder,
   confirmOrder,
-  paymentOrderSuccess,
+  // paymentOrderSuccess,
   paymentOrderVNPay,
   confirmOrderVNPay,
   paymentOrderVNPaySuccess,
   getAllOrdersByShipper,
+  sortObject,
+  updateImageOrder,
 };

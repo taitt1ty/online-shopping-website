@@ -34,7 +34,7 @@ const getAllAddressUser = async (userId) => {
 
     return {
       result: [addresses],
-      errCode: 200,
+      statusCode: 200,
       errors: ["Retrieved all address user successfully!"],
     };
   } catch (error) {
@@ -114,7 +114,7 @@ const getAddressUserById = async (id) => {
 
     return {
       result: [addressUser],
-      errCode: 200,
+      statusCode: 200,
       errors: [`Retrieved address user ${id} successfully!`],
     };
   } catch (error) {

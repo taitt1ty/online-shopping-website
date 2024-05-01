@@ -316,7 +316,7 @@ const webRoutes = (app) => {
     "/api/order/get-all-by-user",
     middlewareControllers.verifyTokenUser,
     orderController.getAllOrdersByUser
-  );  
+  );
   router.get(
     "/api/order/get-all-by-shipper",
     orderController.getAllOrdersByShipper
@@ -331,20 +331,20 @@ const webRoutes = (app) => {
   //   middlewareControllers.verifyTokenUser,
   //   orderController.paymentOrderSuccess
   // );
-  // router.post(
-  //   "/api/order/payment-vnpay-success",
-  //   middlewareControllers.verifyTokenUser,
-  //   orderController.paymentOrderVnpaySuccess
-  // );
-  router.put("/api/order/confirm", orderController.confirmOrder);
+  router.post(
+    "/api/order/payment-vnpay",
+    middlewareControllers.verifyTokenUser,
+    orderController.paymentOrderVNPay
+  );
+  // router.put("/api/order/confirm", orderController.confirmOrder);
+  router.post("/api/order/vnpay-return", orderController.confirmOrderVNPay);
+  router.post(
+    "/api/order/payment-vnpay-success",
+    middlewareControllers.verifyTokenUser,
+    orderController.paymentOrderVNPaySuccess
+  );
 
-  // router.post(
-  //   "/api/order/payment-vnpay",
-  //   middlewareControllers.verifyTokenUser,
-  //   orderController.paymentOrderVnpay
-  // );
-  // router.post("/api/vnpay-return", orderController.confirmOrderVnpay);
-  // router.put("/api/order/update-image", orderController.updateImageOrder);
+  router.put("/api/order/update-image", orderController.updateImageOrder);
 
   app.use("/", router);
 };

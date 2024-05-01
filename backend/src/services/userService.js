@@ -184,7 +184,7 @@ const getUserById = async (userId) => {
     }
 
     if (user.image) {
-      user.image = new Buffer(user.image, "base64").toString("binary");
+      user.image = new Buffer.from(user.image, "base64").toString("binary");
     }
 
     return successResponse(user);
@@ -212,7 +212,7 @@ const changePassword = async (data) => {
     const isMatch = await bcrypt.compare(data.oldpassword, user.password);
     if (!isMatch) {
       return {
-        errCode: 2,
+        statusCode: 2,
         errMessage: "Old password is wrong!",
       };
     }
