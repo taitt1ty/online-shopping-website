@@ -5,24 +5,12 @@ const { Op } = require("sequelize");
 var querystring = require("qs");
 var crypto = require("crypto");
 require("dotenv").config();
-import moment from "moment";
-import localization from "moment/locale/vi";
-import { EXCHANGE_RATES } from "../utils/Constants";
 import {
   successResponse,
   errorResponse,
   missingRequiredParams,
   notFound,
 } from "../utils/ResponseUtils";
-
-// moment.updateLocale("vi", localization);
-// paypal.configure({
-//   mode: "sandbox",
-//   client_id:
-//     "AaeuRt8WCq9SBliEVfEyXXQMosfJD-U9emlCflqe8Blz_KWZ3lnXh1piEMcXuo78MvWj0hBKgLN-FamT",
-//   client_secret:
-//     "ENWZDMzk17X3mHFJli7sFlS9RT1Vi_aocaLsrftWZ2tjHtBVFMzr4kPf5_9iIcsbFWsHf95vXVi6EADv",
-// });
 
 const createOrder = async (data) => {
   try {
@@ -92,18 +80,14 @@ const getAllOrders = async (data) => {
       raw: true,
       nest: true,
     };
-
     if (data.limit && data.offset) {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
-
     if (data.statusId && data.statusId !== "ALL") {
       objectFilter.where = { statusId: data.statusId };
     }
-
     let { rows, count } = await db.Order.findAndCountAll(objectFilter);
-
     if (rows.length === 0) {
       return {
         result: [],
@@ -111,7 +95,6 @@ const getAllOrders = async (data) => {
         errors: ["No orders found!"],
       };
     }
-
     for (let i = 0; i < rows.length; i++) {
       let [addressUser, shipper] = await Promise.all([
         db.AddressUser.findOne({ where: { id: rows[i].addressUserId } }),
@@ -125,7 +108,6 @@ const getAllOrders = async (data) => {
         rows[i].shipperData = shipper;
       }
     }
-
     return {
       result: rows,
       statusCode: 0,
@@ -142,11 +124,9 @@ const getOrderById = async (id) => {
     if (!id) {
       return missingRequiredParams("Id");
     }
-
     const processImage = async (link) => {
       return link;
     };
-
     const order = await db.Order.findOne({
       where: { id: id },
       include: [
@@ -157,7 +137,6 @@ const getOrderById = async (id) => {
       raw: true,
       nest: true,
     });
-
     if (!order) {
       return notFound(`Order with id ${id}`);
     }
@@ -225,16 +204,13 @@ const getOrderById = async (id) => {
 const updateStatusOrder = async (data) => {
   try {
     const { id, statusId, dataOrder } = data;
-
     if (!id || !statusId) {
       return missingRequiredParams("Id, statusId are");
     }
-
     const [updatedRowsCount, updatedRows] = await db.Order.update(
       { statusId: statusId },
       { where: { id: id } }
     );
-
     if (updatedRowsCount === 0) {
       return notFound(`Order with id ${id}`);
     }
@@ -290,7 +266,6 @@ const getAllOrdersByUser = async (userId) => {
           await db.TypeVoucher.findOne({
             where: { id: orders[j].voucherData.typeVoucherId },
           });
-
         const orderDetail = await db.OrderDetail.findAll({
           where: { orderId: orders[j].id },
         });
@@ -301,7 +276,6 @@ const getAllOrdersByUser = async (userId) => {
             raw: true,
             nest: true,
           });
-
           orderDetail[k].productSize = productSize;
           orderDetail[k].productDetail = await db.ProductDetail.findOne({
             where: { id: productSize.productDetailId },
@@ -309,20 +283,15 @@ const getAllOrdersByUser = async (userId) => {
           orderDetail[k].product = await db.Product.findOne({
             where: { id: orderDetail[k].productDetail.productId },
           });
-
           const productImages = await db.ProductImage.findAll({
             where: { productDetailId: orderDetail[k].productDetail.id },
           });
-
           orderDetail[k].productImage = productImages;
         }
-
         orders[j].orderDetail = orderDetail;
       }
-
       result.push({ addressUser: addressUsers[i], orders: orders });
     }
-
     return {
       result: result,
       statusCode: 0,
@@ -341,15 +310,13 @@ const paymentOrderVNPay = async (req) => {
       req.connection.remoteAddress ||
       req.socket.remoteAddress ||
       req.connection.socket.remoteAddress;
-
+    console.log("vnp_IpAddr", ipAddr);
     var tmnCode = process.env.VNP_TMNCODE;
     var secretKey = process.env.VNP_HASHSECRET;
     var vnpUrl = process.env.VNP_URL;
     var returnUrl = process.env.VNP_RETURNURL;
-
     var createDate = process.env.DATE_VNPAYMENT;
     var orderId = uuidv4();
-
     console.log("createDate", createDate);
     console.log("orderId", orderId);
     var amount = req.body.amount;
@@ -378,9 +345,7 @@ const paymentOrderVNPay = async (req) => {
     if (bankCode !== null && bankCode !== "") {
       vnp_Params["vnp_BankCode"] = bankCode;
     }
-
     vnp_Params = sortObject(vnp_Params);
-
     var signData = querystring.stringify(vnp_Params, { encode: false });
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
@@ -406,21 +371,18 @@ const confirmOrderVNPay = async (data) => {
     console.log("secureHash", secureHash);
     delete vnp_Params["vnp_SecureHash"];
     delete vnp_Params["vnp_SecureHashType"];
-
     vnp_Params = sortObject(vnp_Params);
-
     var tmnCode = process.env.VNP_TMNCODE;
     var secretKey = process.env.VNP_HASHSECRET;
-
     var signData = querystring.stringify(vnp_Params, { encode: false });
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
     console.log("signed", signed);
     if (secureHash === signed) {
       return {
-        result: [{ code: vnp_Params["vnp_ResponseCode"] }],
+        result: [],
         statusCode: 0,
-        errors: ["Success"],
+        errors: ["Confirm payment by VNPay successfully!"],
       };
     } else {
       return {
@@ -445,12 +407,10 @@ const paymentOrderVNPaySuccess = async (data) => {
       voucherId: data.voucherId,
       note: data.note,
     });
-
     data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
       item.orderId = product.dataValues.id;
       return item;
     });
-
     await db.OrderDetail.bulkCreate(data.arrDataShopCart);
     let res = await db.ShopCart.findOne({
       where: { userId: data.userId, statusId: 0 },
@@ -489,29 +449,26 @@ const paymentOrderVNPaySuccess = async (data) => {
 
 const confirmOrder = async (data) => {
   try {
-    if (!data.shipperId || !data.orderId || !data.statusId) {
-      return errorResponse("Missing required parameter !");
+    if (!data.orderId || !data.statusId) {
+      return missingRequiredParams("orderId, statusId are");
     }
-
     const Order = await db.Order.findOne({
       where: { id: data.orderId },
       raw: false,
     });
-
-    Order.shipperId = data.shipperId;
     Order.statusId = data.statusId;
     await Order.save();
-
-    return successResponse("ok");
+    return successResponse("Confirm");
   } catch (error) {
-    return errorResponse(error);
+    console.log("Errors", error);
+    return errorResponse(error.message);
   }
 };
 
 const getAllOrdersByShipper = async (shipperId, status) => {
   try {
     if (!shipperId) {
-      return errorResponse("shipperId is required!");
+      return missingRequiredParams("shipperId is");
     }
     let objectFilter = {
       include: [
@@ -548,6 +505,7 @@ const getAllOrdersByShipper = async (shipperId, status) => {
       errors: ["Retrieved all orders by shipper successfully!"],
     };
   } catch (error) {
+    console.log(error);
     return errorResponse(error.message);
   }
 };
@@ -568,45 +526,16 @@ function sortObject(obj) {
   return sorted;
 }
 
-let updateImageOrder = (data) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!data.id || !data.image) {
-        resolve({
-          errCode: 1,
-          errMessage: "Missing required parameter !",
-        });
-      } else {
-        let order = await db.OrderProduct.findOne({
-          where: { id: data.id },
-          raw: false,
-        });
-        order.image = data.image;
-        await order.save();
-
-        resolve({
-          errCode: 0,
-          errMessage: "ok",
-        });
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
 export default {
   createOrder,
   getAllOrders,
   getOrderById,
   updateStatusOrder,
   getAllOrdersByUser,
-  // paymentOrder,
-  confirmOrder,
-  // paymentOrderSuccess,
   paymentOrderVNPay,
   confirmOrderVNPay,
   paymentOrderVNPaySuccess,
+  confirmOrder,
   getAllOrdersByShipper,
   sortObject,
-  updateImageOrder,
 };

@@ -121,16 +121,6 @@ const getAllOrdersByShipper = async (req, res) => {
   }
 };
 
-const updateImageOrder = async (req, res) => {
-  try {
-    const data = await orderService.updateImageOrder(req.body);
-    return res.status(200).json(data);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json(errorResponse("Error from server"));
-  }
-};
-
 export default {
   createOrder,
   getAllOrders,
@@ -144,5 +134,4 @@ export default {
   confirmOrderVNPay,
   paymentOrderVNPaySuccess,
   getAllOrdersByShipper,
-  updateImageOrder,
 };

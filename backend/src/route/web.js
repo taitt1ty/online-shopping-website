@@ -322,29 +322,17 @@ const webRoutes = (app) => {
     orderController.getAllOrdersByShipper
   );
   router.post(
-    "/api/order/payment",
-    middlewareControllers.verifyTokenUser,
-    orderController.paymentOrder
-  );
-  // router.post(
-  //   "/api/order/payment-success",
-  //   middlewareControllers.verifyTokenUser,
-  //   orderController.paymentOrderSuccess
-  // );
-  router.post(
     "/api/order/payment-vnpay",
     middlewareControllers.verifyTokenUser,
     orderController.paymentOrderVNPay
   );
-  // router.put("/api/order/confirm", orderController.confirmOrder);
   router.post("/api/order/vnpay-return", orderController.confirmOrderVNPay);
   router.post(
     "/api/order/payment-vnpay-success",
     middlewareControllers.verifyTokenUser,
     orderController.paymentOrderVNPaySuccess
   );
-
-  router.put("/api/order/update-image", orderController.updateImageOrder);
+  router.put("/api/order/confirm", orderController.confirmOrder);
 
   app.use("/", router);
 };
