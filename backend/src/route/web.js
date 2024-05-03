@@ -9,6 +9,7 @@ import middlewareControllers from "../middlewares/jwtVerify";
 import supplierController from "../controllers/supplierController";
 import receiptController from "../controllers/receiptController";
 import orderController from "../controllers/orderController";
+import statisticController from "../controllers/statisticController";
 import addressUserController from "../controllers/addressUserController";
 
 const webRoutes = (app) => {
@@ -333,6 +334,43 @@ const webRoutes = (app) => {
     orderController.paymentOrderVNPaySuccess
   );
   router.put("/api/order/confirm", orderController.confirmOrder);
+
+  //---------------------------API STATISTIC------------------------------//
+  router.get(
+    "/api/statistic/count-card",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getCountCardStatistic
+  );
+  router.get(
+    "/api/statistic/count-status-order",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getCountStatusOrder
+  );
+  router.get(
+    "/api/statistic/by-month",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getStatisticByMonth
+  );
+  router.get(
+    "/api/statistic/by-day",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getStatisticByDay
+  );
+  router.get(
+    "/api/statistic/profit",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getStatisticProfit
+  );
+  router.get(
+    "/api/statistic/overturn",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getStatisticOverturn
+  );
+  router.get(
+    "/api/statistic/stock-product",
+    middlewareControllers.verifyTokenAdmin,
+    statisticController.getStatisticStockProduct
+  );
 
   app.use("/", router);
 };

@@ -401,7 +401,7 @@ const getAllProductDetail = async (data) => {
     const objectFilter = {
       include: [
         { model: db.ProductImage, as: "productImageData" },
-        { model: db.ProductSize, as: "productSizeData" },
+        { model: db.ProductSize, as: "sizeData" },
       ],
       where: { productId: id },
       limit: +limit,

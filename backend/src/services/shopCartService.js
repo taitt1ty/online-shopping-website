@@ -142,7 +142,7 @@ const getShopCartByUserId = async (userId) => {
             ],
           },
           { model: db.ProductImage, as: "productImageData" },
-          { model: db.ProductSize, as: "productSizeData" },
+          { model: db.ProductSize, as: "sizeData" },
         ],
         raw: true,
       });

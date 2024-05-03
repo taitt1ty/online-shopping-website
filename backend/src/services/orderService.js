@@ -167,7 +167,7 @@ const getOrderById = async (id) => {
     for (let i = 0; i < orderDetail.length; i++) {
       const productSize = await db.ProductSize.findOne({
         where: { id: orderDetail[i].productId },
-        include: [{ model: db.AllCode, as: "productSizeData" }],
+        include: [{ model: db.AllCode, as: "sizeData" }],
         raw: true,
         nest: true,
       });
@@ -272,7 +272,7 @@ const getAllOrdersByUser = async (userId) => {
         for (let k = 0; k < orderDetail.length; k++) {
           const productSize = await db.ProductSize.findOne({
             where: { id: orderDetail[k].productId },
-            include: [{ model: db.AllCode, as: "productSizeData" }],
+            include: [{ model: db.AllCode, as: "sizeData" }],
             raw: true,
             nest: true,
           });

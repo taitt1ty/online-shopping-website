@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       AllCode.hasMany(models.ProductSize, {
         foreignKey: "sizeId",
-        as: "productSizeData",
+        as: "sizeData",
       });
       AllCode.hasMany(models.TypeVoucher, {
         foreignKey: "typeVoucher",

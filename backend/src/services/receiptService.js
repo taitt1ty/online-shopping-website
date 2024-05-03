@@ -72,7 +72,7 @@ const getReceiptById = async (id) => {
           include: [
             {
               model: db.AllCode,
-              as: "productSizeData",
+              as: "sizeData",
               attributes: ["value", "code"],
             },
           ],
@@ -80,7 +80,7 @@ const getReceiptById = async (id) => {
           nest: true,
         });
         if (productSize) {
-          receiptDetail[i].productSizeData = productSize;
+          receiptDetail[i].sizeData = productSize;
           receiptDetail[i].productDetailData = await db.ProductDetail.findOne({
             where: { id: productSize.productDetailId },
           });

@@ -13,8 +13,8 @@ const respFunction = (result, statusCode, errMessage) => {
   };
 };
 
-const errorResponse = (fieldName) => {
-  return respFunction([], errors[0], [`${fieldName}`]);
+const errorResponse = () => {
+  return respFunction([], errors[0], [`Missing required parameter!`]);
 };
 
 const missingRequiredParams = (fieldName) => {

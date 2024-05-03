@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       ProductSize.belongsTo(models.AllCode, {
         foreignKey: "sizeId",
         targetKey: "code",
-        as: "productSizeData",
+        as: "sizeData",
       });
     }
   }
