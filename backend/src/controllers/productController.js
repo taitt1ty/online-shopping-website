@@ -53,11 +53,23 @@ const getProductById = async (req, res) => {
 };
 
 const unActiveProduct = async (req, res) => {
-  await handleRequest(productService.unActiveProduct, req, res);
+  try {
+    const data = await productService.unActiveProduct(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const activeProduct = async (req, res) => {
-  await handleRequest(productService.activeProduct, req, res);
+  try {
+    const data = await productService.activeProduct(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const updateProduct = async (req, res) => {
@@ -90,12 +102,20 @@ const getProductDetailById = async (req, res) => {
     return res.status(500).json(errorResponse("Error from server"));
   }
 };
+
 const updateProductDetail = async (req, res) => {
   await handleRequest(productService.updateProductDetail, req, res);
 };
 
 const deleteProductDetail = async (req, res) => {
   await handleRequest(productService.deleteProductDetail, req, res);
+  try {
+    const data = await productService.deleteProductDetail(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 // PRODUCT IMAGE
@@ -112,10 +132,8 @@ const getAllProductImage = async (req, res) => {
         .status(400)
         .json(missingRequiredParams("id, limit, or offset"));
     }
-
     const data = { id, limit, offset };
     const result = await productService.getAllProductImage(data);
-
     return res.status(200).json(result);
   } catch (error) {
     console.error("Error getting product images:", error);
@@ -141,6 +159,13 @@ const updateProductImage = async (req, res) => {
 
 const deleteProductImage = async (req, res) => {
   await handleRequest(productService.deleteProductImage, req, res);
+  try {
+    const data = await productService.deleteProductImage(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 // PRODUCT SIZE
@@ -167,7 +192,13 @@ const updateProductSize = async (req, res) => {
 };
 
 const deleteProductSize = async (req, res) => {
-  await handleRequest(productService.deleteProductSize, req, res);
+  try {
+    const data = await productService.deleteProductSize(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 // Additional Product Functions
@@ -179,7 +210,7 @@ const getProductNew = async (req, res) => {
   await handleRequest(productService.getProductNew, req, res);
 };
 
-module.exports = {
+export default {
   createProduct,
   getAllProductAdmin,
   getAllProductUser,

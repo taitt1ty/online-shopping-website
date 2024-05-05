@@ -5,11 +5,11 @@ const errors = [500, 400, 404, 403];
 //404: Not Found
 //403: Forbidden, used when the user does not have access to the resource.
 
-const respFunction = (result, statusCode, errMessage) => {
+const respFunction = (result, statusCode, errors) => {
   return {
     result: result,
     statusCode: statusCode,
-    errors: errMessage,
+    errors: errors,
   };
 };
 
@@ -22,7 +22,7 @@ const missingRequiredParams = (fieldName) => {
 };
 
 const notFound = (fieldName) => {
-  return respFunction([], errors[2], [`${fieldName} not found!`]);
+  return respFunction([], errors[2], [`${fieldName} is not found!`]);
 };
 
 const notValid = (fieldName) => {

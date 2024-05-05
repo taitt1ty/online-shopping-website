@@ -5,7 +5,7 @@ import {
   successResponse,
   errorResponse,
   missingRequiredParams,
-  userNotExist,
+  notFound,
 } from "../utils/ResponseUtils";
 
 require("dotenv").config();
@@ -61,7 +61,7 @@ const loginUser = async (data) => {
     }
     const isExist = await checkUserPhoneNumber(data.phoneNumber);
     if (!isExist) {
-      return userNotExist();
+      return notFound("Phone number");
     }
     const user = await db.User.findOne({
       attributes: ["email", "roleId", "password", "fullName", "id"],
@@ -69,14 +69,14 @@ const loginUser = async (data) => {
     });
 
     if (!user) {
-      return userNotExist();
+      return notFound("User");
     }
     let check = await bcrypt.compare(data.password, user.password);
     if (!check) {
       return {
         result: [],
         statusCode: 401,
-        errMessage: ["Wrong password!"],
+        errors: ["Wrong password!"],
       };
     }
     // Delete password before return information of user
@@ -85,7 +85,7 @@ const loginUser = async (data) => {
     return {
       result: [accessToken],
       statusCode: 200,
-      errMessage: ["Login successful"],
+      errors: ["Login successful"],
     };
   } catch (error) {
     console.error("Error in login:", error);
@@ -213,7 +213,7 @@ const changePassword = async (data) => {
     if (!isMatch) {
       return {
         statusCode: 2,
-        errMessage: "Old password is wrong!",
+        errors: "Old password is wrong!",
       };
     }
 
