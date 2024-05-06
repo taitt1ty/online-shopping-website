@@ -258,7 +258,7 @@ const getProductById = async (id) => {
         productSizes[k].stock = quantity;
       }
       productDetail[i].productImage = productImages;
-      productDetail[i].productDetailSize = productSizes;
+      productDetail[i].productSize = productSizes;
     }
     return {
       result: [product],
@@ -271,7 +271,7 @@ const getProductById = async (id) => {
   }
 };
 
-const unActiveProduct = async (data) => {
+const inActiveProduct = async (data) => {
   try {
     if (!data.id) {
       return missingRequiredParams("id is");
@@ -285,8 +285,9 @@ const unActiveProduct = async (data) => {
     }
     product.statusId = "S2";
     await product.save();
-    return successResponse(`Product with id = ${id} deactivated`);
+    return successResponse(`Product with id = ${data.id} deactivated`);
   } catch (error) {
+    console.log(error);
     return errorResponse(error.message);
   }
 };
@@ -305,8 +306,9 @@ const activeProduct = async (data) => {
     }
     product.statusId = "S1";
     await product.save();
-    return successResponse(`Product with id = ${id} activated`);
+    return successResponse(`Product with id = ${data.id} activated`);
   } catch (error) {
+    console.log(error);
     return errorResponse(error.message);
   }
 };
@@ -621,7 +623,7 @@ const getAllProductSize = async (data) => {
     if (!id || !limit || !offset) {
       return missingRequiredParams("id, limit, offset are");
     }
-    const productSizes = await db.ProductSize.findAndCountAll({
+    const productSize = await db.ProductSize.findAndCountAll({
       where: { productDetailId: id },
       limit: +limit,
       offset: +offset,
@@ -631,21 +633,29 @@ const getAllProductSize = async (data) => {
       raw: true,
       nest: true,
     });
-    for (const productSize of productSizes.rows) {
-      const receiptQuantity = await db.ReceiptDetail.sum("quantity", {
-        where: { sizeId: productSize.id },
+    for (let i = 0; i < productSize.rows.length; i++) {
+      const receiptDetail = await db.ReceiptDetail.findAll({
+        where: { sizeId: productSize.rows[i].id },
       });
-      const orderQuantity = await db.OrderDetail.sum("quantity", {
-        where: { productId: productSize.id },
-        include: {
-          model: db.Order,
-          where: { statusId: { [Op.ne]: "S7" } },
-        },
+      const orderDetail = await db.OrderDetail.findAll({
+        where: { productId: productSize.rows[i].id },
       });
-      productSize.stock = receiptQuantity - orderQuantity;
+      let quantity = 0;
+      for (let j = 0; j < receiptDetail.length; j++) {
+        quantity += receiptDetail[j].quantity;
+      }
+      for (let k = 0; k < orderDetail.length; k++) {
+        const order = await db.Order.findOne({
+          where: { id: orderDetail[k].orderId },
+        });
+        if (order.statusId != "S7") {
+          quantity -= orderDetail[k].quantity;
+        }
+      }
+      productSize.rows[i].stock = quantity;
     }
     return {
-      result: [productSizes.rows],
+      result: [productSize.rows],
       statusCode: 200,
       errors: ["Get all product sizes successfully!"],
     };
@@ -660,7 +670,7 @@ const getProductSizeById = async (id) => {
     if (!id) {
       return missingRequiredParams("id");
     } else {
-      const productSize = await db.productSize.findOne({
+      const productSize = await db.ProductSize.findOne({
         where: { id: id },
       });
       if (!productSize) {
@@ -683,8 +693,9 @@ const updateProductSize = async (data) => {
     if (!data.id || !data.sizeId) {
       return missingRequiredParams("id, size are");
     } else {
-      let productSize = await db.productSize.findOne({
+      let productSize = await db.ProductSize.findOne({
         where: { id: data.id },
+        raw: false,
       });
       if (!productSize) {
         return notFound("Product size");
@@ -706,13 +717,14 @@ const deleteProductSize = async (data) => {
     if (!data.id) {
       return missingRequiredParams("id");
     } else {
-      let productSize = await db.productSize.findOne({
+      let productSize = await db.ProductSize.findOne({
         where: { id: data.id },
+        raw: false,
       });
       if (!productSize) {
-        return notValid("Product Size not found");
+        return notFound("product size");
       }
-      await db.productSize.destroy({
+      await productSize.destroy({
         where: { id: data.id },
       });
       return successResponse("Product size deleted");
@@ -723,9 +735,14 @@ const deleteProductSize = async (data) => {
   }
 };
 
+//Get a list of products based on views
 const getProductFeature = async (limit) => {
   try {
-    let res = await db.Product.findAll({
+    if (!limit || isNaN(limit)) {
+      return errorResponse("Invalid or missing 'limit' parameter");
+    }
+    limit = +limit;
+    let products = await db.Product.findAll({
       include: [
         { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
@@ -735,48 +752,34 @@ const getProductFeature = async (limit) => {
         },
         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
       ],
-      limit: +limit,
+      limit: limit,
       order: [["view", "DESC"]],
       raw: true,
       nest: true,
     });
-
-    for (let i = 0; i < res.length; i++) {
-      let objectFilterProductDetail = {
-        where: { productId: res[i].id },
+    for (let i = 0; i < products.length; i++) {
+      const productDetails = await db.ProductDetail.findAll({
+        where: { productId: products[i].id },
         raw: true,
-      };
-      res[i].productDetail = await db.ProductDetail.findAll(
-        objectFilterProductDetail
-      );
-
-      for (let j = 0; j < res[i].productDetail.length; j++) {
-        res[i].productDetail[j].productSize = await db.productSize.findAll({
-          where: { productDetailId: res[i].productDetail[j].id },
+      });
+      for (let j = 0; j < productDetails.length; j++) {
+        const productSizes = await db.ProductSize.findAll({
+          where: { productDetailId: productDetails[j].id },
           raw: true,
         });
-
-        res[i].price = res[i].productDetail[0].discountPrice;
-
-        res[i].productDetail[j].productImage = await db.ProductImage.findAll({
-          where: { productDetailId: res[i].productDetail[j].id },
+        const productImages = await db.ProductImage.findAll({
+          where: { productDetailId: productDetails[j].id },
           raw: true,
         });
-
-        for (
-          let k = 0;
-          k < res[i].productDetail[j].productImage.length > 0;
-          k++
-        ) {
-          res[i].productDetail[j].productImage[k].image = Buffer.from(
-            res[i].productDetail[j].productImage[k].image,
-            "base64"
-          ).toString("binary");
-        }
+        productDetails[j].productDetailSize = productSizes;
+        productDetails[j].productImage = productImages;
+        // Set price to the first product detail's discount price
+        products[i].price = productDetails[0].discountPrice;
       }
+      products[i].productDetail = productDetails;
     }
     return {
-      result: [res],
+      result: [products],
       statusCode: 200,
       errors: ["Get product feature successfully!"],
     };
@@ -786,9 +789,14 @@ const getProductFeature = async (limit) => {
   }
 };
 
+//Get a list of products based on create time (new products)
 const getProductNew = async (limit) => {
   try {
-    let res = await db.Product.findAll({
+    if (!limit || isNaN(limit)) {
+      return errorResponse("Invalid or missing 'limit' parameter");
+    }
+    limit = +limit;
+    let products = await db.Product.findAll({
       include: [
         { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
@@ -798,48 +806,40 @@ const getProductNew = async (limit) => {
         },
         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
       ],
-      limit: +limit,
+      limit: limit,
       order: [["createdAt", "DESC"]],
       raw: true,
       nest: true,
     });
-    for (let i = 0; i < res.length; i++) {
-      let objectFilterProductDetail = {
-        where: { productId: res[i].id },
+    for (let i = 0; i < products.length; i++) {
+      const productDetails = await db.ProductDetail.findAll({
+        where: { productId: products[i].id },
         raw: true,
-      };
-      res[i].productDetail = await db.ProductDetail.findAll(
-        objectFilterProductDetail
-      );
-      for (let j = 0; j < res[i].productDetail.length; j++) {
-        res[i].productDetail[j].productSize = await db.productSize.findAll({
-          where: { productDetailId: res[i].productDetail[j].id },
+      });
+      for (let j = 0; j < productDetails.length; j++) {
+        const productSizes = await db.ProductSize.findAll({
+          where: { productDetailId: productDetails[j].id },
           raw: true,
         });
-        res[i].price = res[i].productDetail[0].discountPrice;
-        res[i].productDetail[j].productImage = await db.ProductImage.findAll({
-          where: { productDetailId: res[i].productDetail[j].id },
+        const productImages = await db.ProductImage.findAll({
+          where: { productDetailId: productDetails[j].id },
           raw: true,
         });
-        for (
-          let k = 0;
-          k < res[i].productDetail[j].productImage.length > 0;
-          k++
-        ) {
-          res[i].productDetail[j].productImage[k].image = Buffer.from(
-            res[i].productDetail[j].productImage[k].image,
-            "base64"
-          ).toString("binary");
-        }
+
+        productDetails[j].productDetailSize = productSizes;
+        productDetails[j].productImage = productImages;
+
+        products[i].price = productDetails[0].discountPrice;
       }
+      products[i].productDetail = productDetails;
     }
     return {
-      result: [res],
+      result: products,
       statusCode: 200,
       errors: ["Get new product successfully!"],
     };
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return errorResponse(error.message);
   }
 };
@@ -853,7 +853,6 @@ const getProductShopCart = async (data) => {
       let shopCart = await db.ShopCart.findAll({
         where: { userId: data.userId },
       });
-
       for (let i = 0; i < shopCart.length; i++) {
         let productDetail = await db.ProductDetail.findOne({
           where: { id: productSize.productDetailId },
@@ -1022,7 +1021,7 @@ export default {
   createProduct,
   getAllProductAdmin,
   getAllProductUser,
-  unActiveProduct,
+  inActiveProduct,
   activeProduct,
   getProductById,
   updateProduct,

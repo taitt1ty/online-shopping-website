@@ -19,17 +19,13 @@ const createTypeShip = async (req, res) => {
 };
 
 const getTypeShipById = async (req, res) => {
-  await handleRequest(
-    async (data) => {
-      const typeShip = await typeShipService.getTypeShipById(data.id);
-      if (!typeShip.result) {
-        return errorResponse("Type of ship not found");
-      }
-      return typeShip;
-    },
-    req,
-    res
-  );
+  try {
+    const data = await typeShipService.getTypeShipById(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const getAllTypeShip = async (req, res) => {

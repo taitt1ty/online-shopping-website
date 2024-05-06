@@ -52,9 +52,9 @@ const getProductById = async (req, res) => {
   }
 };
 
-const unActiveProduct = async (req, res) => {
+const inActiveProduct = async (req, res) => {
   try {
-    const data = await productService.unActiveProduct(req.query);
+    const data = await productService.inActiveProduct(req.query);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
@@ -108,7 +108,6 @@ const updateProductDetail = async (req, res) => {
 };
 
 const deleteProductDetail = async (req, res) => {
-  await handleRequest(productService.deleteProductDetail, req, res);
   try {
     const data = await productService.deleteProductDetail(req.query.id);
     return res.status(200).json(data);
@@ -126,7 +125,6 @@ const createProductImage = async (req, res) => {
 const getAllProductImage = async (req, res) => {
   try {
     const { id, limit, offset } = req.query;
-
     if (!id || !limit || !offset) {
       return res
         .status(400)
@@ -174,7 +172,13 @@ const createProductSize = async (req, res) => {
 };
 
 const getAllProductSize = async (req, res) => {
-  await handleRequest(productService.getAllProductSize, req, res);
+  try {
+    const data = await productService.getAllProductSize(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("Error retrieving products:", error);
+    return res.status(500).json(errorResponse("Internal server error"));
+  }
 };
 
 const getProductSizeById = async (req, res) => {
@@ -193,7 +197,17 @@ const updateProductSize = async (req, res) => {
 
 const deleteProductSize = async (req, res) => {
   try {
-    const data = await productService.deleteProductSize(req.query.id);
+    const data = await productService.deleteProductSize(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
+};
+// Additional Product Functions
+const getProductFeature = async (req, res) => {
+  try {
+    const data = await productService.getProductFeature(req.query.limit);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
@@ -201,13 +215,34 @@ const deleteProductSize = async (req, res) => {
   }
 };
 
-// Additional Product Functions
-const getProductFeature = async (req, res) => {
-  await handleRequest(productService.getProductFeature, req, res);
+const getProductNew = async (req, res) => {
+  try {
+    const data = await productService.getProductNew(req.query.limit);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
-const getProductNew = async (req, res) => {
-  await handleRequest(productService.getProductNew, req, res);
+const getProductShopCart = async (req, res) => {
+  try {
+    const data = await productService.getProductShopCart(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
+};
+
+const getProductRecommend = async (req, res) => {
+  try {
+    const data = await productService.getProductRecommend(req.query);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 export default {
@@ -215,7 +250,7 @@ export default {
   getAllProductAdmin,
   getAllProductUser,
   getProductById,
-  unActiveProduct,
+  inActiveProduct,
   activeProduct,
   updateProduct,
   createProductDetail,
@@ -235,4 +270,6 @@ export default {
   deleteProductSize,
   getProductFeature,
   getProductNew,
+  getProductShopCart,
+  getProductRecommend,
 };

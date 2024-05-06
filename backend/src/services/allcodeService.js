@@ -4,7 +4,7 @@ const {
   errorResponse,
   successResponse,
   missingRequiredParams,
-  userNotExist,
+  notFound,
 } = require("../utils/ResponseUtils");
 
 const createNewCode = async (data) => {
@@ -12,7 +12,6 @@ const createNewCode = async (data) => {
     if (!data.type || !data.value || !data.code) {
       return missingRequiredParams("type, value, or code");
     }
-
     let res = await db.AllCode.findOne({
       where: { code: data.code },
     });
@@ -38,7 +37,6 @@ const getAllCode = async (typeInput) => {
     if (!typeInput) {
       return missingRequiredParams("type");
     }
-
     let allCode = await db.AllCode.findAll({
       where: { type: typeInput },
     });
@@ -54,7 +52,6 @@ const updateCode = async (data) => {
     if (!data.value || !data.code || !data.id) {
       return missingRequiredParams("value, code, or id");
     }
-
     let res = await db.AllCode.findOne({
       where: { id: data.id },
       raw: false,
@@ -65,11 +62,11 @@ const updateCode = async (data) => {
       await res.save();
       return successResponse("Success");
     } else {
-      return userNotExist();
+      return notFound(res);
     }
   } catch (error) {
-    console.error("Error in handleUpdateAllCode:", error);
-    return errorResponse();
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 

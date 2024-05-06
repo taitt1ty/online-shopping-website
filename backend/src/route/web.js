@@ -61,9 +61,9 @@ const webRoutes = (app) => {
   router.get("/api/product/get-all-user", productController.getAllProductUser);
   router.get("/api/product/get-by-id", productController.getProductById);
   router.post(
-    "/api/product/unactive",
+    "/api/product/inActive",
     middlewareControllers.verifyTokenAdmin,
-    productController.unActiveProduct
+    productController.inActiveProduct
   );
   router.post(
     "/api/product/active",
@@ -141,7 +141,6 @@ const webRoutes = (app) => {
     middlewareControllers.verifyTokenAdmin,
     productController.deleteProductSize
   );
-
   router.get("/api/product/get-feature", productController.getProductFeature);
   router.get("/api/product/get-new", productController.getProductNew);
   // router.get("/api/product/get-shopcart", productController.getProductShopCart);
