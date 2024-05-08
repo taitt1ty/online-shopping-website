@@ -143,12 +143,12 @@ const webRoutes = (app) => {
   );
   router.get("/api/product/get-feature", productController.getProductFeature);
   router.get("/api/product/get-new", productController.getProductNew);
-  // router.get("/api/product/get-shopcart", productController.getProductShopCart);
-  // router.get(
-  //   "/api/product/get-recommend",
-  //   productController.getProductRecommend
-  // );
-  // Use the router for all routes
+  router.get("/api/product/shopcart", productController.getProductShopCart);
+  router.get(
+    "/api/product/recommend",
+    productController.getProductRecommend
+  );
+
 
   //---------------------------API TYPE-SHIP------------------------------//
   router.post(

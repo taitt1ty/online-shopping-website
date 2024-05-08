@@ -156,7 +156,6 @@ const updateProductImage = async (req, res) => {
 };
 
 const deleteProductImage = async (req, res) => {
-  await handleRequest(productService.deleteProductImage, req, res);
   try {
     const data = await productService.deleteProductImage(req.query.id);
     return res.status(200).json(data);

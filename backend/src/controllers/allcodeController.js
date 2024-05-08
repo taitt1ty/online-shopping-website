@@ -5,15 +5,13 @@ const handleRequest = async (handler, req, res) => {
   try {
     const data = await handler(req.body);
     if (!data) {
-      return res
-        .status(500)
-        .json(errorResponse("Failed to process the request"));
+      return res.status(500).json(errorResponse(error.message));
     }
     const statusCode = data.statusCode === 0 ? 200 : 500;
     return res.status(statusCode).json(data);
   } catch (error) {
     console.error(error);
-    return res.status(500).json(errorResponse("Internal server error"));
+    return res.status(500).json(errorResponse(error.message));
   }
 };
 
@@ -23,10 +21,10 @@ const createNewCode = async (req, res) => {
 
 const getAllCode = async (req, res) => {
   try {
-    const data = await allCodeService.getAllCode(req.query);
+    const data = await allCodeService.getAllCode(req.query.type);
     return res.status(200).json(data);
   } catch (error) {
-    console.error("Error retrieving products:", error);
+    console.error(error);
     return res.status(500).json(errorResponse("Internal server error"));
   }
 };
@@ -60,12 +58,12 @@ const getListCode = async (req, res) => {
     const data = await allCodeService.getListCode(req.query);
     return res.status(200).json(data);
   } catch (error) {
-    console.error("Error retrieving products:", error);
-    return res.status(500).json(errorResponse("Internal server error"));
+    console.error(error);
+    return res.status(500).json(errorResponse(error.message));
   }
 };
 
-module.exports = {
+export default {
   createNewCode,
   getAllCode,
   updateCode,

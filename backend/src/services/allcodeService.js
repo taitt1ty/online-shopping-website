@@ -34,23 +34,30 @@ const createNewCode = async (data) => {
 
 const getAllCode = async (typeInput) => {
   try {
-    if (!typeInput) {
-      return missingRequiredParams("type");
+    if (!typeInput || typeof typeInput !== "string") {
+      return missingRequiredParams("type is");
     }
-    let allCode = await db.AllCode.findAll({
+    let code = await db.AllCode.findAll({
       where: { type: typeInput },
     });
-    return successResponse(allCode);
+    if (code.length === 0) {
+      return notFound(`Type code ${typeInput}`);
+    }
+    return {
+      result: [code],
+      statusCode: 200,
+      errors: [`Get all ${typeInput} successfully!`],
+    };
   } catch (error) {
-    console.error("Error in getAllCodeService:", error);
-    return errorResponse();
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 
 const updateCode = async (data) => {
   try {
     if (!data.value || !data.code || !data.id) {
-      return missingRequiredParams("value, code, or id");
+      return missingRequiredParams("value, code, id are");
     }
     let res = await db.AllCode.findOne({
       where: { id: data.id },
@@ -60,9 +67,9 @@ const updateCode = async (data) => {
       res.value = data.value;
       res.code = data.code;
       await res.save();
-      return successResponse("Success");
+      return successResponse(`Update code ${id}`);
     } else {
-      return notFound(res);
+      return errorResponse(error.message);
     }
   } catch (error) {
     console.error(error);
@@ -75,37 +82,38 @@ const getCodeById = async (id) => {
     if (!id) {
       return missingRequiredParams("id");
     }
-
     let data = await db.AllCode.findOne({
       where: { id: id },
     });
-    return successResponse(data);
+    return {
+      result: [data],
+      statusCode: 200,
+      errors: [`Get code with id = ${id} successfully!`],
+    };
   } catch (error) {
-    console.error("Error in getDetailAllCodeById:", error);
-    return errorResponse();
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 
-const deleteCode = async (allCodeId) => {
+const deleteCode = async (id) => {
   try {
-    if (!allCodeId) {
-      return missingRequiredParams("allCodeId");
+    if (!id) {
+      return missingRequiredParams("id");
     }
-
     let foundAllCode = await db.AllCode.findOne({
-      where: { id: allCodeId },
+      where: { id: id },
     });
     if (!foundAllCode) {
       return userNotExist();
     }
-
     await db.AllCode.destroy({
-      where: { id: allCodeId },
+      where: { id: id },
     });
-    return successResponse("The AllCode has been deleted");
+    return successResponse(`Delete code with id = ${id}`);
   } catch (error) {
-    console.error("Error in handleDeleteAllCode:", error);
-    return errorResponse();
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 
@@ -127,10 +135,14 @@ const getListCode = async (data) => {
         value: { [Op.substring]: data.keyword },
       };
     let allCode = await db.AllCode.findAndCountAll(objectFilter);
-    return successResponse(allCode.rows);
+    return {
+      result: [allCode.rows],
+      statusCode: 200,
+      errors: [`Get list code of ${data.type} successfully!`],
+    };
   } catch (error) {
-    console.error("Error in getListAllCodeService:", error);
-    return errorResponse();
+    console.error(error);
+    return errorResponse(error);
   }
 };
 

@@ -181,7 +181,6 @@ const deleteItem = async (data) => {
     if (!data.id) {
       return errorResponse("Missing required parameter!");
     }
-
     const res = await db.ShopCart.findOne({
       where: { id: data.id, statusId: 0 },
     });

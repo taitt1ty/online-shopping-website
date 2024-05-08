@@ -14,7 +14,7 @@ const respFunction = (result, statusCode, errors) => {
 };
 
 const errorResponse = () => {
-  return respFunction([], errors[0], [`Missing required parameter!`]);
+  return respFunction([], errors[0], ["Internal server error"]);
 };
 
 const missingRequiredParams = (fieldName) => {

@@ -83,7 +83,7 @@ const loginUser = async (data) => {
     delete user.password;
     const accessToken = CommonUtils.encodeToken(user.id);
     return {
-      result: [accessToken],
+      result: [{ accessToken: accessToken, userId: user.id }],
       statusCode: 200,
       errors: ["Login successful"],
     };
@@ -117,12 +117,10 @@ const updateUser = async (data) => {
     if (!data.id) {
       return missingRequiredParams("userId");
     }
-
     let user = await db.User.findOne({ where: { id: data.id } });
     if (!user) {
       return userNotExist();
     }
-
     user.fullName = data.fullName;
     user.address = data.address;
     user.roleId = data.roleId;
@@ -131,9 +129,7 @@ const updateUser = async (data) => {
     if (data.image) {
       user.image = data.image;
     }
-
     await user.save();
-
     return successResponse("Updated user");
   } catch (error) {
     console.log(error);

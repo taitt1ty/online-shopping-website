@@ -522,12 +522,12 @@ const getAllProductImage = async (data) => {
       return notFound("Product image");
     }
     return {
-      result: [productImage],
+      result: [productImage.rows],
       statusCode: 200,
       errors: ["Get all product images successfully"],
     };
   } catch (error) {
-    console.error("Error get all product images", error);
+    console.error(error);
     return errorResponse(error.message);
   }
 };
@@ -568,27 +568,27 @@ const updateProductImage = async (data) => {
     }
     productImage.image = data.image;
     await productImage.save();
-    return successResponse(`Updated product image ${id}`);
+    return successResponse(`Updated product image with id = ${data.id}`);
   } catch (error) {
-    console.error("Error updating product image:", error);
+    console.error(error);
     return errorResponse(error.message);
   }
 };
 
-const deleteProductImage = async (data) => {
+const deleteProductImage = async (id) => {
   try {
-    if (!data.id) {
-      return missingRequiredParams("id");
+    if (!id) {
+      return missingRequiredParams("id is");
     }
     let productImage = await db.ProductImage.findOne({
-      where: { id: data.id },
+      where: { id: id },
       raw: false,
     });
     if (productImage) {
       await db.ProductImage.destroy({
-        where: { id: data.id },
+        where: { id: id },
       });
-      return successResponse("Deleted product image");
+      return successResponse(`Deleted product image with id = ${id}`);
     } else {
       return notFound("Product image");
     }
@@ -679,7 +679,7 @@ const getProductSizeById = async (id) => {
       return {
         result: [productSize],
         statusCode: 200,
-        errors: [`Get product size ${id} successfully!`],
+        errors: [`Get product size with id = ${id} successfully!`],
       };
     }
   } catch (error) {
@@ -854,6 +854,9 @@ const getProductShopCart = async (data) => {
         where: { userId: data.userId },
       });
       for (let i = 0; i < shopCart.length; i++) {
+        let productSize = await db.ProductSize.findOne({
+          where: { id: shopCart[i].sizeId },
+        });
         let productDetail = await db.ProductDetail.findOne({
           where: { id: productSize.productDetailId },
         });
@@ -872,16 +875,6 @@ const getProductShopCart = async (data) => {
             },
             {
               model: db.AllCode,
-              as: "colorData",
-              attributes: ["value", "code"],
-            },
-            {
-              model: db.AllCode,
-              as: "sizeData",
-              attributes: ["value", "code"],
-            },
-            {
-              model: db.AllCode,
               as: "statusData",
               attributes: ["value", "code"],
             },
@@ -891,7 +884,6 @@ const getProductShopCart = async (data) => {
           raw: true,
           nest: true,
         });
-
         productArr.push(product);
       }
       if (productArr && productArr.length > 0) {
@@ -910,17 +902,6 @@ const getProductShopCart = async (data) => {
                 where: { productDetailId: productArr[g].productDetail[j].id },
                 raw: true,
               });
-            for (
-              let k = 0;
-              k < productArr[g].productDetail[j].productImage.length > 0;
-              k++
-            ) {
-              productArr[g].productDetail[j].productImage[k].image =
-                Buffer.from(
-                  productArr[g].productDetail[j].productImage[k].image,
-                  "base64"
-                ).toString("binary");
-            }
           }
         }
       }
@@ -936,86 +917,75 @@ const getProductShopCart = async (data) => {
   }
 };
 
-const getProductRecommend = async (data) => {
-  try {
-    let productArr = [];
-    if (!data.userId && !data.limit) {
-      return missingRequiredParams("userId or limit");
-    } else {
-      let recommender = new jsrecommender.Recommender();
-      let table = new jsrecommender.Table();
-      let rateList = await db.Comment.findAll({
-        where: { star: { [Op.not]: null } },
-      });
-      for (let i = 0; i < rateList.length; i++) {
-        table.setCell(
-          rateList[i].productId,
-          rateList[i].userId,
-          rateList[i].star
-        );
-      }
-      let model = recommender.fit(table);
-      let predicted_table = recommender.transform(table);
-      for (let i = 0; i < predicted_table.columnNames.length; ++i) {
-        let user = predicted_table.columnNames[i];
-        for (let j = 0; j < predicted_table.rowNames.length; ++j) {
-          let product = predicted_table.rowNames[j];
-          if (
-            user == data.userId &&
-            Math.round(predicted_table.getCell(product, user)) > 3
-          ) {
-            let productData = await db.Product.findOne({
-              where: { id: product },
-            });
-            if (productArr.length == +data.limit) {
-              break;
-            } else {
-              productArr.push(productData);
-            }
-          }
-        }
-      }
-      if (productArr && productArr.length > 0) {
-        for (let g = 0; g < productArr.length; g++) {
-          let objectFilterProductDetail = {
-            where: { productId: productArr[g].id },
-            raw: true,
-          };
-          productArr[g].productDetail = await db.ProductDetail.findAll(
-            objectFilterProductDetail
-          );
-          for (let j = 0; j < productArr[g].productDetail.length; j++) {
-            productArr[g].price = productArr[g].productDetail[0].discountPrice;
-            productArr[g].productDetail[j].productImage =
-              await db.ProductImage.findAll({
-                where: { productDetailId: productArr[g].productDetail[j].id },
-                raw: true,
-              });
-            for (
-              let k = 0;
-              k < productArr[g].productDetail[j].productImage.length > 0;
-              k++
-            ) {
-              productArr[g].productDetail[j].productImage[k].image =
-                Buffer.from(
-                  productArr[g].productDetail[j].productImage[k].image,
-                  "base64"
-                ).toString("binary");
-            }
-          }
-        }
-      }
-    }
-    return {
-      result: [productArr],
-      statusCode: 200,
-      errors: ["Get recommended products successfully!"],
-    };
-  } catch (error) {
-    console.log(error);
-    return errorResponse(error.message);
-  }
-};
+// const getProductRecommend = async (data) => {
+//   try {
+//     let productArr = [];
+//     if (!data.userId && !data.limit) {
+//       return missingRequiredParams("userId or limit");
+//     } else {
+//       let recommender = new jsrecommender.Recommender();
+//       let table = new jsrecommender.Table();
+//       let rateList = await db.Comment.findAll({
+//         where: { star: { [Op.not]: null } },
+//       });
+//       for (let i = 0; i < rateList.length; i++) {
+//         table.setCell(
+//           rateList[i].productId,
+//           rateList[i].userId,
+//           rateList[i].star
+//         );
+//       }
+//       let model = recommender.fit(table);
+//       let predicted_table = recommender.transform(table);
+//       for (let i = 0; i < predicted_table.columnNames.length; ++i) {
+//         let user = predicted_table.columnNames[i];
+//         for (let j = 0; j < predicted_table.rowNames.length; ++j) {
+//           let product = predicted_table.rowNames[j];
+//           if (
+//             user == data.userId &&
+//             Math.round(predicted_table.getCell(product, user)) > 3
+//           ) {
+//             let productData = await db.Product.findOne({
+//               where: { id: product },
+//             });
+//             if (productArr.length == +data.limit) {
+//               break;
+//             } else {
+//               productArr.push(productData);
+//             }
+//           }
+//         }
+//       }
+//       if (productArr && productArr.length > 0) {
+//         for (let g = 0; g < productArr.length; g++) {
+//           let objectFilterProductDetail = {
+//             where: { productId: productArr[g].id },
+//             raw: true,
+//           };
+//           productArr[g].productDetail = await db.ProductDetail.findAll(
+//             objectFilterProductDetail
+//           );
+//           for (let j = 0; j < productArr[g].productDetail.length; j++) {
+//             productArr[g].price = productArr[g].productDetail[0].discountPrice;
+//             productArr[g].productDetail[j].productImage =
+//               await db.ProductImage.findAll({
+//                 where: { productDetailId: productArr[g].productDetail[j].id },
+//                 raw: true,
+//               });
+//           }
+//         }
+//       }
+//     }
+//     return {
+//       result: [productArr],
+//       statusCode: 200,
+//       errors: ["Get recommended products successfully!"],
+//     };
+//   } catch (error) {
+//     console.log(error);
+//     return errorResponse(error.message);
+//   }
+// };
 
 export default {
   createProduct,
@@ -1043,5 +1013,5 @@ export default {
   getProductFeature,
   getProductNew,
   getProductShopCart,
-  getProductRecommend,
+  // getProductRecommend,
 };
