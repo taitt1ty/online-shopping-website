@@ -128,7 +128,7 @@ const getAllProductAdmin = async (data) => {
       res.rows.sort(dynamicSortMultiple("price"));
     }
     return {
-      result: [res.rows],
+      result: res.rows,
       statusCode: 200,
       errors: ["Get all products successfully!"],
     };
@@ -178,7 +178,7 @@ const getAllProductUser = async (data) => {
       res.rows.sort(dynamicSortMultiple("price"));
     }
     return {
-      result: [res.rows],
+      result: res.rows,
       statusCode: 200,
       errors: ["Get all products successfully!"],
     };
