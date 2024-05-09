@@ -1,6 +1,6 @@
 <template>
   <div class="content">
-    <h1 class="heading-product">LASTEST PRODUCTS</h1>
+    <h1 class="heading-product">PRODUCTS</h1>
     <div class="container">
       <div class="row">
         <div
@@ -39,7 +39,7 @@ import { useRouter } from "vue-router";
 const counterStore = useCounterStore();
 const listProducts = ref([]);
 const disableButton = ref(false);
-const page = ref(1);
+const page = ref(0);
 const newList = ref([]);
 const router = useRouter();
 

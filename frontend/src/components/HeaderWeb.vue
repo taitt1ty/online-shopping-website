@@ -224,6 +224,8 @@ export default {
         this.$router.push({ name: "LoginAccount" });
         localStorage.setItem("cart", JSON.stringify([]));
         localStorage.setItem("updateCart", JSON.stringify([]));
+        // localStorage.setItem("token", JSON.stringify(""));
+        localStorage.removeItem("token");
         this.counterStore.listCarts = [];
         this.counterStore.getListInfo = [];
       } else {

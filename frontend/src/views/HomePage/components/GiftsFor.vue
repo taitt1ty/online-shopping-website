@@ -1,86 +1,87 @@
 <template>
   <div>
     <div class="backgr6">
-        <div class="row">
-            <div class="col-md-5">
-                <img :src="counterStore.gift.image" class="picture-gift">
-            </div>
-            <div class="col-md-7">
-                <div class="title-saving" v-html="counterStore.gift.title"></div>
-                <div class="para-saving">{{ counterStore.gift.content }}</div>
-				<div class="small">
-					<button class="btn-gift-buy display-inline">Buy Now</button>
-                <button class="btn-gift-see display-inline">See More</button>
-				</div>
-                
-            </div>
+      <div class="row">
+        <div class="col-md-5">
+          <img src="https://i.imgur.com/r5U6YRe.png" class="picture-gift" />
         </div>
+        <div class="col-md-7">
+          <!-- <div class="title-saving" v-html="counterStore.gift.title"></div> -->
+          <div class="title-saving">GIFTS FOR YOUR<br>LOVED ONES</div>
+          <div class="para-saving">
+            Chúng tôi không chỉ đặt niềm tin vào việc tạo ra những mẫu mã độc
+            đáo và phong cách mà còn chú trọng vào việc sử dụng các loại vải cao
+            cấp, đảm bảo cảm giác thoải mái và tự tin khi mặc. Với sự đa dạng về
+            kiểu dáng và màu sắc, bạn có thể tìm thấy sản phẩm phù hợp với phong
+            cách và sở thích của mình. Hãy chọn chúng tôi để trải nghiệm sự hoàn
+            hảo trong từng chi tiết của sản phẩm quần áo bạn chọn.
+          </div>
+          <div class="small">
+            <button class="btn-gift-buy display-inline">MUA NGAY</button>
+            <button class="btn-gift-see display-inline">XEM THÊM</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useCounterStore } from '@/stores/index';
-import { onMounted } from 'vue';
-const counterStore = useCounterStore();
+// import { useCounterStore } from "@/stores/index";
+import { onMounted } from "vue";
+// const counterStore = useCounterStore();
 onMounted(() => {
-	counterStore.fetchApiGift();
+//   counterStore.fetchApiGift();
 });
 </script>
 
 <style lang="scss" scoped>
 @import "@/style/styles.scss";
-.backgr6
-{
-	background-color: #6929a5;
-	margin: 0 45px;
-	border-radius: 15px;
-	margin-top: 80px;
-	.row
-	{
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+.backgr6 {
+  background-color: #6929a5;
+  margin: 0 45px;
+  border-radius: 15px;
+  margin-top: 80px;
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
-.picture-gift
-{
-	object-fit: contain;
-	width: 100%;
-	height: auto;
-	padding: 60px 0 60px 25px;
-	text-align: center;
-	vertical-align: middle;
+.picture-gift {
+  object-fit: contain;
+  width: 100%;
+  height: auto;
+  padding: 60px 0 60px 25px;
+  text-align: center;
+  vertical-align: middle;
 }
-.btn-gift-buy
-{
-	background-color: white;
-	border: 1px solid white;
-	padding: 10px 40px;
-	font-size: 16px;
-	color: black;
-	margin-top: 30px;
-	&:hover {
-		background-color: #6929a5;
-		border: 1px solid white;
-		color: white;
-	}
+.btn-gift-buy {
+  background-color: white;
+  border: 1px solid white;
+  padding: 10px 40px;
+  font-size: 16px;
+  color: black;
+  margin-top: 30px;
+  &:hover {
+    background-color: #6929a5;
+    border: 1px solid white;
+    color: white;
+  }
 }
-.btn-gift-see
-{
-	background-color: #9242dd;
-	border: 1px solid #9242dd;
-	padding: 10px 40px;
-	font-size: 16px;
-	color: white;
-	margin-top: 30px;
-	margin-left: 10px;
-	&:hover
-	{
-		background-color: #6929a5;
-		border: 1px solid #6f42c1;
-		color: #6f42c1;
-	}
+.btn-gift-see {
+  background-color: #9242dd;
+  border: 1px solid #9242dd;
+  padding: 10px 40px;
+  font-size: 16px;
+  color: white;
+  margin-top: 30px;
+  margin-left: 10px;
+  &:hover {
+    background-color: #6929a5;
+    border: 1px solid #6f42c1;
+    color: #6f42c1;
+  }
 }
 .title-saving {
   font-size: 32px;
@@ -97,33 +98,33 @@ onMounted(() => {
   display: inline-block;
 }
 @media only screen and (max-width: 739px) {
-	.picture-gift {
-		width: 80%;
-		padding: 60px 0 60px 90px;
-	}
-	.title-saving{
-		font-size: 28px;
-		padding-left: 30px;
-	}
-	.para-saving {
-	padding-left: 30px;
-	padding-right: 20px;
-	}
-	.btn-gift-buy{
-		margin-top: 20px;
-		margin-bottom: 30px;
-	}
-	.btn-gift-see {
-		margin-top: 20px;
-		margin-bottom: 30px;
-	}
-	.small {
-		text-align: left;
-		padding-left: 30px;
-	}
+  .picture-gift {
+    width: 80%;
+    padding: 60px 0 60px 90px;
+  }
+  .title-saving {
+    font-size: 28px;
+    padding-left: 30px;
+  }
+  .para-saving {
+    padding-left: 30px;
+    padding-right: 20px;
+  }
+  .btn-gift-buy {
+    margin-top: 20px;
+    margin-bottom: 30px;
+  }
+  .btn-gift-see {
+    margin-top: 20px;
+    margin-bottom: 30px;
+  }
+  .small {
+    text-align: left;
+    padding-left: 30px;
+  }
 }
-@media  screen and (min-width: 375px) and (max-width: 811px) {
-  .title-saving{
+@media screen and (min-width: 375px) and (max-width: 811px) {
+  .title-saving {
     font-size: 30px;
   }
   .para-saving {
@@ -134,22 +135,20 @@ onMounted(() => {
     margin-top: 45px;
   }
 }
-@media  screen and (max-width: 320px){
-	.backgr6 {
+@media screen and (max-width: 320px) {
+  .backgr6 {
     margin: 0;
     margin-top: 45px;
   }
-  .btn-gift-buy
-{
-	padding: 10px 20px;
-	font-size: 15px;
-	margin-left: 15px;
-}
-.btn-gift-see
-{
-	padding: 10px 20px;
-	font-size: 15px;
-	margin-left: 10px;
-}
+  .btn-gift-buy {
+    padding: 10px 20px;
+    font-size: 15px;
+    margin-left: 15px;
+  }
+  .btn-gift-see {
+    padding: 10px 20px;
+    font-size: 15px;
+    margin-left: 10px;
+  }
 }
 </style>

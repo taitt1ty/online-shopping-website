@@ -24,9 +24,9 @@
     >
       <a-form-item
         label="Name:"
-        name="fullname"
+        name="fullName"
         :rules="[
-          { required: true, message: 'Please input your fullname!' },
+          { required: true, message: 'Please input your fullName!' },
           {
             pattern: /^[A-Za-zÀ-ỹ\s]*[A-Za-zÀ-ỹ][A-Za-zÀ-ỹ\s]*$/,
             message: 'Please enter a valid name with only letters and spaces',
@@ -34,7 +34,7 @@
           },
         ]"
       >
-        <a-input v-model:value="formState.fullname" class="border-none" />
+        <a-input v-model:value="formState.fullName" class="border-none" />
       </a-form-item>
 
       <a-form-item
@@ -53,8 +53,8 @@
       </a-form-item>
 
       <a-form-item
-        label="Phone number:"
-        name="phone"
+        label="phone number:"
+        name="phoneNumber"
         :rules="[
           { required: true, message: 'Please input your phone number!' },
           {
@@ -64,7 +64,7 @@
           },
         ]"
       >
-        <a-input v-model:value="formState.phone" class="border-none" />
+        <a-input v-model:value="formState.phoneNumber" class="border-none" />
       </a-form-item>
 
       <a-form-item
@@ -134,8 +134,8 @@
 <script setup>
 import { reactive } from "vue";
 import { nextTick } from "vue";
-import { message } from 'ant-design-vue';
-import { useRouter } from 'vue-router';
+import { message } from "ant-design-vue";
+import { useRouter } from "vue-router";
 import { useCounterStore } from "@/stores";
 import { onMounted } from "vue";
 // import { v4 as uuidv4 } from 'uuid';
@@ -144,29 +144,31 @@ import { onMounted } from "vue";
 import { ref } from "vue";
 // import moment from "moment";
 const counterStore = useCounterStore();
-const arrayFormRegister = ref([]);
+// const arrayFormRegister = ref([]);
 const router = useRouter();
 const formRef = ref(null);
-const arrayNew = ref([]);
+// const arrayNew = ref([]);
 onMounted(async () => {
   await counterStore.fetchListAccounts();
-  localStorage.setItem("listAcc",JSON.stringify(counterStore.getListAcc));
-})
+  localStorage.setItem("listAcc", JSON.stringify(counterStore.getListAcc));
+});
 // const randomId = ref(generateRandomId()); // comma
 const formState = reactive({
-  fullname: "",
+  fullName: "",
   password: "",
-  phone: "",
+  phoneNumber: "",
   email: "",
   checkPass: "",
   birthday: "",
   remember: true,
 });
-const generateRandomId = () => {
-  return Math.random().toString(36).substring(2, 10);
-}
+// const generateRandomId = () => {
+//   return Math.random().toString(36).substring(2, 10);
+// };
 const onFinish = (values) => {
   registerAcc();
+  message.success("Đăng ký thành công!");
+  router.push({name: "LoginAccount"});
   console.log("Success:", values);
 };
 const onFinishFailed = (errorInfo) => {
@@ -195,16 +197,16 @@ const validateStrongPassword = (_, value) => {
   return Promise.resolve();
 };
 
-function formatBirthday(birthdayObject) {
-  if (birthdayObject) {
-    const day = birthdayObject.$D;
-    const month = birthdayObject.$M + 1; // Tháng trong Day.js bắt đầu từ 0, nên cần cộng thêm 1
-    const year = birthdayObject.$y;
-    return `${day}/${month}/${year}`;
-  } else {
-    console.log("Ngày sinh không hợp lệ.");
-  }
-}
+// function formatBirthday(birthdayObject) {
+//   if (birthdayObject) {
+//     const day = birthdayObject.$D;
+//     const month = birthdayObject.$M + 1; // Tháng trong Day.js bắt đầu từ 0, nên cần cộng thêm 1
+//     const year = birthdayObject.$y;
+//     return `${day}/${month}/${year}`;
+//   } else {
+//     console.log("Ngày sinh không hợp lệ.");
+//   }
+// }
 
 const validateBirthday = (_, value) => {
   const selectedDate = new Date(value);
@@ -224,59 +226,26 @@ const validateBirthday = (_, value) => {
 };
 const registerAcc = async () => {
   await nextTick();
-  arrayFormRegister.value = JSON.parse(localStorage.getItem("listAcc")) || [];
-  console.log("This is check type of value: ....... ",arrayFormRegister.value);
-  const type = typeof arrayFormRegister.value;
-  console.log(type); 
-  if (formRef.value && Array.isArray(arrayFormRegister.value)) {
-    const findIndexByPhone = arrayFormRegister.value.findIndex(
-      (item) => item.phone === formState.phone
-    );
-    if (findIndexByPhone !== 1) {
-      console.log("Exist account");
-      message.error("Tài khoản đã tồn tại!")
+  formRef.value.validate().then( async (valid) => {
+    if (valid) {
+      const newAccountObject = {
+        fullName: formState.fullName,
+        phoneNumber: formState.phoneNumber,
+        email: formState.email,
+        // birthday: formatBirthday(formState.birthday),
+        password: formState.password,
+      };
+      try {
+        const result = await counterStore.addAcc(newAccountObject);
+        console.log(result);
+      } catch (error) {
+        console.log("Error?");
+      }
+
     } else {
-      console.log("Register!");
-      message.success('Đăng ký thành công!');
-      router.push({ name: 'LoginAccount' });
-      formRef.value.validate().then((valid) => {
-        if (valid) {
-          const newAccountId = generateRandomId();
-          // arrayFormRegister.value = [];
-          const newAccountObject = {
-            id: newAccountId,
-            fullname: formState.fullname,
-            phone: formState.phone,
-            email: formState.email,
-            birthday: formatBirthday(formState.birthday),
-            password: formState.password,
-          };
-          console.log(arrayFormRegister.value);
-          // Xóa toàn bộ mảng và thêm đối tượng mới
-          arrayFormRegister.value = [newAccountObject];
-          // arrayFormRegister.value.push(newAccountObject);
-          // localStorage.setItem(
-          //   "listAcc",
-          //   JSON.stringify(arrayFormRegister.value)
-          // );
-          counterStore.addAcc(newAccountObject);
-          // Tạo đối tượng mới cho giỏ hàng và truyền vào counterStore.addCartForAcc()
-          const newCartObject = { id: newAccountId, cart: [] };
-          arrayNew.value = [newCartObject];
-          counterStore.addCartForAcc(newCartObject);
-          // arrayNew.value = [];
-          // arrayNew.value.push({id: newAccountId, cart: []});
-          // counterStore.addCartForAcc(arrayNew.value);
-          // counterStore.addCartForAcc()
-          counterStore.fetchListAccounts();
-        } else {
-          console.log("Form is not valid");
-        }
-      });
+      console.log("Form is not valid");
     }
-  } else {
-    console.error("Form reference is not available");
-  }
+  });
 };
 </script>
 

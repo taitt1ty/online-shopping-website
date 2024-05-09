@@ -1,6 +1,78 @@
 import * as request from "@/utils/request";
 import * as req_json from "@/utils/request";
 
+//get type ship from lasted backend
+export const type_ship = async () => {
+  try {
+    const res = await request.get_from_be("api/type-ship");
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const get_type_ship_by_id = async (id) => {
+  try {
+    const res = await request.get_from_be(`api/type-ship/get-by-id?id=${id}`);
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export const update_type_ship = async () => {
+  try {
+    const res = await request.get_from_be("api/type-ship");
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+//get list cart by userID
+export const get = async (data) => {
+  try {
+    const res = await request.post_from_be("api/user/login", data);
+    console.log("is undefined: ", res);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log('my error', error);
+  }
+};
+
+//get products
+export const listProducts = async (perPage, page) => {
+  try {
+    //  const res = await request.get(`products?_limit=${perPage}&_page=${page}`);
+    const res = await request.get_from_be(
+      `api/product/get-all-user?limit=${perPage}&offset=${page}`
+    );
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+//fixed
+export const getCustomerCart = async (customerId) => {
+  try {
+    const res = await request.get_from_be(`api/shop-cart/by-user-id?userId=${customerId}`);
+    console.log("is undefined: ", res);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 //fixed
 export const saving = async () => {
   try {
@@ -12,7 +84,7 @@ export const saving = async () => {
   }
 };
 
-export const feedback = async (id) => {
+export const feedback = async (id) =>{
   const res = await request.get(`setting/feedback/${id}`);
   const resultObject = JSON.parse(res);
   return resultObject;
@@ -85,34 +157,9 @@ export const contact = async () => {
 };
 
 //fixed
-export const listProducts = async (perPage, page) => {
-  try {
-    //  const res = await request.get(`products?_limit=${perPage}&_page=${page}`);
-    const res = await request.get(
-      `product/pagination?limit=${perPage}&page=${page}`
-    );
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-//fixed
 export const eachProduct = async (id) => {
   try {
     const res = await request.get(`product/${id}`);
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-//fixed
-export const getCustomerCart = async (customerId) => {
-  try {
-    const res = await request.get(`cart/customer-cart/${customerId}`);
     const resultObject = JSON.parse(res);
     return resultObject;
   } catch (error) {
@@ -143,18 +190,17 @@ export const getListAccounts = async () => {
   }
 };
 
-//new add
-export const checkLogin = async (username, password) => {
+//new add - FIXED FROM LASTEST BACKEND
+export const checkLogin = async (data) => {
   try {
-    console.log("This username: ", username);
-    console.log("This pass: ", password);
-    const res = await request.get(
-      `customer/login?username=${username}&password=${password}`
-    );
-    const resultObject = JSON.parse(res);
-    return resultObject;
+    const res = await request.post_from_be("api/user/login", data);
+    console.log("is undefined: ", res);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
   } catch (error) {
-    console.log(error);
+    console.log('my error', error);
   }
 };
 
@@ -195,10 +241,10 @@ export const hasOrder = async (info, customerId) => {
     console.log(error);
   }
 };
-
+//FIXED FROM LASTEST BACKEND
 export const addListAcc = async (newAccountData) => {
   try {
-    const res = await request.post("listAccounts", newAccountData);
+    const res = await request.post_from_be("api/user/register", newAccountData);
     return res;
   } catch (error) {
     console.log(error);
@@ -208,6 +254,7 @@ export const addListAcc = async (newAccountData) => {
 export const addCustomerCart = async (newCart) => {
   try {
     const res = await request.post("customerCarts", newCart);
+    console.log(res);
     return res;
   } catch (error) {
     console.log(error);

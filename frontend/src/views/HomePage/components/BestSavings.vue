@@ -4,17 +4,25 @@
       <div class="row">
         <div class="col-lg-6 col-md-12">
           <div>
-            <img :src="counterStore.children.image" class="picture-saving" />
+            <img src="https://i.imgur.com/qe8PRu0.png" class="picture-saving" />
           </div>
         </div>
         <div class="col-lg-6 col-md-12">
           <div>
-            <div class="title-saving" v-html="counterStore.children.title"></div>
+            <div
+              class="title-saving"
+            >BEST SAVING ON <br>NEW ARRIVAL</div>
             <div class="para-saving">
-              {{ counterStore.children.content }}
+              <!-- {{ counterStore.children.content }} -->
+
+              Khi lựa chọn sản phẩm quần áo từ chúng tôi, bạn sẽ trải nghiệm sự
+              kết hợp hoàn hảo giữa chất lượng, phong cách và sự thoải mái. Với
+              sự tỉ mỉ trong từng đường kim mũi chỉ, sản phẩm của chúng tôi
+              không chỉ đảm bảo về mặt thẩm mỹ mà còn đảm bảo sự bền bỉ qua thời
+              gian. 
             </div>
-            <button class="btn-saving-buy display-inline">Buy Now</button>
-            <button class="btn-saving-see display-inline">See More</button>
+            <button class="btn-saving-buy display-inline">MUA NGAY</button>
+            <button class="btn-saving-see display-inline">XEM THÊM</button>
           </div>
         </div>
       </div>
@@ -23,12 +31,12 @@
 </template>
 
 <script setup>
-import { useCounterStore } from "@/stores/index";
+// import { useCounterStore } from "@/stores/index";
 import { onMounted } from "vue";
-const counterStore = useCounterStore();
+// const counterStore = useCounterStore();
 onMounted(() => {
-  counterStore.fetchApi();
-  console.log(counterStore.children);
+  // counterStore.fetchApi();
+  // console.log(counterStore.children);
 });
 </script>
 

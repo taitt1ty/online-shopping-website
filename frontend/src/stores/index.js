@@ -41,6 +41,7 @@ export const useCounterStore = defineStore("counter", {
     isLoggedIn: JSON.parse(localStorage.getItem("Logout")),
     valueSelect: Number,
     arrInfo: [],
+    getAllTypeShip: []
   }),
   actions: {
     setLoggedIn(value) {
@@ -49,6 +50,14 @@ export const useCounterStore = defineStore("counter", {
     infoDelivery() {
       this.infoDeliveryDetail =
         JSON.parse(localStorage.getItem("infoDelivery")) || [];
+    },
+    async getTypeShip() {
+      try {
+        return await savingServices.type_ship();
+      }
+      catch (error) {
+        console.error("Error in productTicked:", error);
+      }
     },
     totalBillOrder() {
       try {
@@ -267,11 +276,11 @@ export const useCounterStore = defineStore("counter", {
     async fetchListAccounts() {
       this.getListAcc = await savingServices.getListAccounts() || [];
     },
-    async checkLoginAccount(username,password){
+    async checkLoginAccount(data){
       // this.isLoading++;
       // const arr = await savingServices.checkLogin(username,password);
       // this.checkLogin = arr.result;
-      this.checkLogin = await savingServices.checkLogin(username,password);
+      this.checkLogin = await savingServices.checkLogin(data);
       // this.isLoading--;
     },
     async fetchEachProduct(productId) {
@@ -285,6 +294,7 @@ export const useCounterStore = defineStore("counter", {
     async fetchListProduct(page) {
       this.isLoading++;
       const arr = await savingServices.listProducts(this.perPage, page);
+      console.log(arr);
       if (arr.statusCode === 200) {
         this.listProducts = arr.result;
         this.isLoading--;

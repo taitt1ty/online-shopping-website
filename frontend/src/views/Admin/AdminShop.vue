@@ -31,6 +31,8 @@
           <a-menu-item key="4">Đơn hàng</a-menu-item>
           <a-menu-item key="5">Tài khoản</a-menu-item>
           <a-menu-item key="6">Tin nhắn</a-menu-item>
+          <a-menu-item key="7">Vouchers</a-menu-item>
+          <a-menu-item key="8">Đơn vị vận chuyển</a-menu-item>
         </a-sub-menu>
         <a-sub-menu key="sub2">
           <template #title>
@@ -39,10 +41,10 @@
               <span>Website</span>
             </span>
           </template>
-          <a-menu-item key="7">Quản lý vouchers</a-menu-item>
-          <a-menu-item key="8">Quản lý sự kiện</a-menu-item>
+          <a-menu-item key="9">Quản lý vouchers</a-menu-item>
+          <a-menu-item key="10">Quản lý sự kiện</a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="9">
+        <a-menu-item key="11">
           <file-outlined />
           <span>File</span>
         </a-menu-item>
@@ -58,6 +60,8 @@
         <OrderManagement v-if="selectedKeys.includes('4')"/>
         <AccountManagement v-if="selectedKeys.includes('5')"/>
         <StatisticsFigure v-if="selectedKeys.includes('2')"/>
+        <ProductManagement v-if="selectedKeys.includes('3')"/>
+        <TypeDelivery v-if="selectedKeys.includes('8')"/>
         <div>
            ...
           <br />
@@ -168,7 +172,10 @@
 import OrderManagement from '@/views/Admin/Manage/Orders/OrderManagement';
 import AccountManagement from '@/views/Admin/Manage/Accounts/AccountManagement';
 import StatisticsFigure from '@/views/Admin/Statistics/StatisticsFigure.vue';
+import ProductManagement from '@/views/Admin/Manage/Products/ProductManagement';
+import TypeDelivery from '@/views/Admin/Manage/TypeDelivery/TypeDelivery'
 import { ref } from "vue";
+import { PieChartOutlined, DesktopOutlined, UserOutlined, TeamOutlined, FileOutlined  } from "@ant-design/icons-vue";
 const selectedKeys = ref(["4"]);
 </script>
 <style scoped>

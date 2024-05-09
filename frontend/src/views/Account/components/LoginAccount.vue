@@ -1,60 +1,66 @@
 <template>
-  <section class="container shadow">
-    <h1 class="login">LOGIN</h1>
-    <a-form
-      :model="formState"
-      name="basic"
-      :label-col="{ span: 8 }"
-      :wrapper-col="{ span: 8 }"
-      autocomplete="off"
-      @finish="onFinish"
-      @finishFailed="onFinishFailed"
-    >
-      <a-form-item
-        label="Username"
-        name="username"
-        :rules="[{ required: true, message: 'Please input your username!' }]"
+  <div>
+    <section class="container shadow">
+      <h1 class="login">LOGIN</h1>
+      <a-form
+        :model="formState"
+        name="basic"
+        :label-col="{ span: 8 }"
+        :wrapper-col="{ span: 8 }"
+        autocomplete="off"
+        @finish="onFinish"
+        @finishFailed="onFinishFailed"
       >
-        <a-input
-          v-model:value="formState.username"
-          class="border-none"
-          ref="userNameInput"
-        />
-      </a-form-item>
-
-      <a-form-item
-        label="Password"
-        name="password"
-        :rules="[{ required: true, message: 'Please input your password!' }]"
-      >
-        <a-input-password
-          v-model:value="formState.password"
-          class="border-none"
-          ref="passwordInput"
-        />
-      </a-form-item>
-      <a-form-item name="remember" :wrapper-col="{ offset: 8, span: 8 }">
-        <span class="space"
-          ><a class="forgot-pass" href="#">Forgot password</a>
-          <router-link :to="{ name: 'RegisterAccount' }"
-            ><a href="#">Register now!</a></router-link
-          ></span
+        <a-form-item
+          label="Username"
+          name="username"
+          :rules="[{ required: true, message: 'Please input your username!' }]"
         >
-      </a-form-item>
+          <a-input
+            v-model:value="formState.username"
+            class="border-none"
+            ref="userNameInput"
+          />
+        </a-form-item>
 
-      <a-form-item
-        :wrapper-col="{ offset: 8, span: 8 }"
-        class="text-align-center"
-      >
-        <a-button class="btn-welcome" html-type="submit">LOGIN</a-button>
-      </a-form-item>
-    </a-form>
-  </section>
-  <router-view />
+        <a-form-item
+          label="Password"
+          name="password"
+          :rules="[{ required: true, message: 'Please input your password!' }]"
+        >
+          <a-input-password
+            v-model:value="formState.password"
+            class="border-none"
+            ref="passwordInput"
+          />
+        </a-form-item>
+        <a-form-item name="remember" :wrapper-col="{ offset: 8, span: 8 }">
+          <span class="space"
+            ><a class="forgot-pass" href="#">Forgot password</a>
+            <router-link :to="{ name: 'RegisterAccount' }"
+              ><a href="#">Register now!</a></router-link
+            ></span
+          >
+        </a-form-item>
+
+        <a-form-item
+          :wrapper-col="{ offset: 8, span: 8 }"
+          class="text-align-center"
+        >
+          <a-button class="btn-welcome" html-type="submit">LOGIN</a-button>
+        </a-form-item>
+        <a-alert v-show="isError" :message="nameError" type="error" show-icon>
+          <template #icon><smile-outlined /></template>
+        </a-alert>
+      </a-form>
+    </section>
+    <router-view />
+  </div>
 </template>
 
 <script setup>
 import { message } from "ant-design-vue";
+import { SmileOutlined } from "@ant-design/icons-vue";
 // import { stringify } from "uuid";
 import { onMounted, reactive } from "vue";
 import { ref } from "vue";
@@ -65,9 +71,12 @@ const userNameInput = ref(null);
 const counterStore = useCounterStore();
 const passwordInput = ref(null);
 const idAcc = ref(null);
+const isError = ref(false);
+const nameError = ref(null);
+const token = ref(null);
 // const arrAccount = ref([]);
-// const router = useRouter();
 const router = useRouter();
+// const router = useRouter();
 // const arrCartForAcc = ref([]);
 const formState = reactive({
   username: "",
@@ -79,8 +88,8 @@ const onFinish = (values) => {
   checkLoginAccountCustomer();
   localStorage.setItem("whologin", JSON.stringify(idAcc.value));
   console.log(idAcc.value);
-  // localStorage.setItem("Logout",JSON.stringify("Log out"));
-  // counterStore.setLoggedIn("Log out");
+  localStorage.setItem("Logout", JSON.stringify("Log out"));
+  counterStore.setLoggedIn("Log out");
 };
 const onFinishFailed = (errorInfo) => {
   console.log("Failed:", errorInfo);
@@ -90,33 +99,80 @@ onMounted(async () => {
 });
 
 const checkLoginAccountCustomer = async () => {
-  await counterStore.checkLoginAccount(formState.username,formState.password);
-  const status = counterStore.checkLogin.statusCode;
-  if (status === 200) {
-    const customerId = counterStore.checkLogin.result[0].customerID;
-    message.success("Đăng nhập thành công!");
-      router.push({ name: "LayoutPage" });
-      // idAcc.value = arrAccount.value[counterStore.checkLogin.result[2].customerID].id;
-      await counterStore.fetchListCustomerCart(customerId);
-      localStorage.setItem("idCustomer", JSON.stringify(customerId));
-      const arr1 = counterStore.getListCart || [];
-      const targetCart = arr1 || [];
-      counterStore.listCarts = targetCart;
-      localStorage.setItem("Logout", JSON.stringify("Log out"));
-      counterStore.setLoggedIn("Log out");
-  }
-  else if(status === 401){
-    // message.error("");
-    formState.password = "";
-    formState.username = "";
-    userNameInput.value.focus();
-    message.error("Tài khoản chưa được đăng ký!");
-  } else if (status === 403) {
-    message.error("Sai mật khẩu!");
-    formState.password = "";
+  const formLogin = {
+    phoneNumber: formState.username,
+    password: formState.password,
+  };
+  await counterStore.checkLoginAccount(formLogin);
+  if (counterStore.checkLogin.statusCode !== 200) {
+    // message.error(counterStore.checkLogin.errors[0]);
+    console.log("Hello from login: ", counterStore.checkLogin.errors[0]),
+      (nameError.value = counterStore.checkLogin?.errors[0]);
+    console.log(counterStore.checkLogin);
+    if (counterStore.checkLogin?.statusCode === 401) {
+      formState.password = "";
       passwordInput.value.focus();
+    } else if (counterStore.checkLogin?.statusCode === 404) {
+      formState.username = "";
+      userNameInput.value.focus();
+    }
+    isError.value = true;
+  } else {
+    message.success("Đăng nhập thành công!");
+    router.push({ name: "LayoutPage" });
+    token.value = counterStore.checkLogin?.result[0].accessToken;
+    let id = counterStore.checkLogin?.result[0].userId;
+    localStorage.setItem("token", JSON.stringify(token.value));
+    localStorage.setItem("idCustomer", JSON.stringify(id));
+    localStorage.setItem("Logout", JSON.stringify("Log out"));
+    counterStore.setLoggedIn("Log out");
+    await counterStore.fetchListCustomerCart(4);
+    const arr1 = counterStore.getListCart || [];
+    console.log(arr1);
+    const targetCart = arr1 || [];
+    counterStore.listCarts = targetCart;
+    console
   }
+  // console.log("This is checklogin: ", counterStore.checkLogin);
+  // console.log("this is data give: ", formLogin);
+  // console.log("from Login",counterStore.checkLogin.statusCode);
+  // const status = counterStore.checkLogin.statusCode;
+  // if (status === 200) {
+  //   const customerId = counterStore.checkLogin.result[0].customerID;
+  //   message.success("Đăng nhập thành công!");
+  //   router.push({ name: "LayoutPage" });
+  //   // idAcc.value = arrAccount.value[counterStore.checkLogin.result[2].customerID].id;
+  //   await counterStore.fetchListCustomerCart(customerId);
+  //   localStorage.setItem("idCustomer", JSON.stringify(customerId));
+  //   const arr1 = counterStore.getListCart || [];
+  //   const targetCart = arr1 || [];
+  //   counterStore.listCarts = targetCart;
+  //   localStorage.setItem("Logout", JSON.stringify("Log out"));
+  //   counterStore.setLoggedIn("Log out");
+  // } else if (status === 401) {
+  //   // message.error("");
+  //   formState.password = "";
+  //   formState.username = "";
+  //   userNameInput.value.focus();
+  //   message.error("Tài khoản chưa được đăng ký!");
+  // } else if (status === 403) {
+  //   message.error("Sai mật khẩu!");
+  //   formState.password = "";
+  //   passwordInput.value.focus();
+  // } else {
+  //   message.error("Sai mật khẩu hoặc username!");
+  // }
 };
+
+// const checkLogin = async () => {
+//   const formLogin = {
+//     phoneNumber: formState.username,
+//     password: formState.password
+//   }
+//   await counterStore.checkLoginAccount(formLogin);
+//   // if(counterStore.this
+//   console.log("This is checklogin: ", counterStore.checkLogin);
+// };
 
 // const loginAccount = async () => {
 //   // arrAccount.value = JSON.parse(localStorage.getItem("listAcc")) || [];
@@ -154,7 +210,6 @@ const checkLoginAccountCustomer = async () => {
 //     message.error("Tài khoản chưa được đăng ký!");
 //   }
 // };
-
 </script>
 
 <style lang="scss" scoped>

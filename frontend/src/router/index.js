@@ -8,6 +8,7 @@ import PurchaseProducts from "@/views/CartProduct/component/PurchaseProducts.vue
 import LoginAccount from "@/views/Account/components/LoginAccount.vue";
 import RegisterAccount from "@/views/Account/components/RegisterAccount.vue";
 import AdminShop from "@/views/Admin/AdminShop.vue";
+import LoginAdmin from "@/views/Admin/Login/LoginAdmin.vue";
 const routes = [
     {
         path: '/',
@@ -44,6 +45,11 @@ const routes = [
         name: 'RegisterAccount',
         component: RegisterAccount
     },
+    {
+        path: '/admin/login',
+        name: 'LoginAdmin',
+        component: LoginAdmin
+    },
     // {
     //     path: '/shop/:idCustomer',
     //     name: 'ShopPageCustomer',
@@ -65,7 +71,7 @@ const routes = [
         component: LayoutPage
     },
     {
-        path: '/admin',
+        path: '/admin/index',
         name: 'AdminShop',
         component: AdminShop
     }

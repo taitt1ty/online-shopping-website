@@ -6,7 +6,7 @@
         <why-shop/>
         <gifts-for/>
         <contact-us/>
-        <testi-web/>
+        <!-- <testi-web/> -->
     </div>
 </template>
 
@@ -17,7 +17,7 @@ import BestSavings from './components/BestSavings.vue'
 import WhyShop from './components/WhyShop.vue'
 import GiftsFor from './components/GiftsFor.vue'
 import ContactUs from './components/ContactUs.vue'
-import TestiWeb from './components/TestiWeb.vue'
+// import TestiWeb from './components/TestiWeb.vue'
 
 export default({
     name: 'ContentWeb',
@@ -28,7 +28,6 @@ export default({
         WhyShop,
         GiftsFor,
         ContactUs,
-        TestiWeb,
     },
     setup() {
         

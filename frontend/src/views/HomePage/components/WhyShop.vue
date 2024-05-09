@@ -92,7 +92,7 @@
                     </svg>
                 </div>
                 <div class="font-why-title">Fast Delivery</div>
-				<div class="font-why-para">variations of passages of Lorem Ipsum available</div>
+				<div class="font-why-para">Ship hàng nhanh chóng đến tay khách hàng!</div>
             </div>
         </div>
         <div class="col-md-4">
@@ -201,7 +201,7 @@
                     </svg>
                 </div>
                 <div class="font-why-title">Free Shipping</div>
-				<div class="font-why-para">variations of passages of Lorem Ipsum available</div>
+				<div class="font-why-para">Miễn phí phí ship trên toàn quốc.</div>
             </div>
         </div>
         <div class="col-md-4">
@@ -216,7 +216,7 @@
                     </svg>
                 </div>
                 <div class="font-why-title">Best Quality</div>
-				<div class="font-why-para">variations of passages of Lorem Ipsum available</div>
+				<div class="font-why-para">Bán hàng có tâm và có tầm đi đôi với chất lượng.</div>
             </div>
         </div>
     </div>
