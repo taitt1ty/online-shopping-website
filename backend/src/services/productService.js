@@ -1,14 +1,13 @@
 import db from "../models/index";
 import jsrecommender from "js-recommender";
 require("dotenv").config();
-const { Op } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 import {
   successResponse,
   errorResponse,
   missingRequiredParams,
   notFound,
 } from "../utils/ResponseUtils";
-import { notification } from "paypal-rest-sdk";
 
 function dynamicSort(property) {
   var sortOrder = 1;
@@ -89,17 +88,83 @@ const createProduct = async (data) => {
   }
 };
 
+// const getAllProductAdmin = async (data) => {
+//   try {
+//     let objectFilter = {
+//       include: [
+//         { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
+//         {
+//           model: db.AllCode,
+//           as: "categoryData",
+//           attributes: ["value", "code"],
+//         },
+//         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
+//       ],
+//       raw: true,
+//       nest: true,
+//     };
+//     if (data.limit && data.offset) {
+//       objectFilter.limit = +data.limit;
+//       objectFilter.offset = +data.offset;
+//     }
+//     if (data.categoryId && data.categoryId !== "ALL") {
+//       objectFilter.where = { categoryId: data.categoryId };
+//     }
+//     if (data.brandId && data.brandId !== "ALL") {
+//       objectFilter.where = { ...objectFilter.where, brandId: data.brandId };
+//     }
+//     if (data.sortName === "true") {
+//       objectFilter.order = [["name", "ASC"]];
+//     }
+//     if (data.keyword && data.keyword !== "") {
+//       objectFilter.where = {
+//         ...objectFilter.where,
+//         name: { [Op.substring]: data.keyword },
+//       };
+//     }
+//     let res = await db.Product.findAndCountAll(objectFilter);
+//     if (data.sortPrice && data.sortPrice === "true") {
+//       res.rows.sort(dynamicSortMultiple("price"));
+//     }
+//     return {
+//       result: res.rows,
+//       statusCode: 200,
+//       errors: ["Get all products successfully!"],
+//     };
+//   } catch (error) {
+//     console.error("Error get all products:", error);
+//     return errorResponse(error.message);
+//   }
+// };
+
 const getAllProductAdmin = async (data) => {
   try {
     let objectFilter = {
       include: [
-        { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
+        // { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
           model: db.AllCode,
           as: "categoryData",
           attributes: ["value", "code"],
         },
         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
+        {
+          model: db.ProductDetail,
+          as: "productDetailData",
+          attributes: ["color", "originalPrice", "discountPrice"],
+          include: [
+            {
+              model: db.ProductImage,
+              as: "productImageData",
+              attributes: ["image"],
+            },
+            {
+              model: db.ProductSize,
+              as: "sizeData",
+              attributes: ["sizeId"],
+            },
+          ],
+        },
       ],
       raw: true,
       nest: true,
@@ -127,13 +192,81 @@ const getAllProductAdmin = async (data) => {
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
+    const productsWithDetails = res.rows.reduce((acc, product) => {
+      const productDetail = product.productDetailData;
+      if (
+        productDetail &&
+        typeof productDetail === "object" &&
+        Object.keys(productDetail).length > 0
+      ) {
+        let images = [];
+        if (Array.isArray(productDetail.productImageData)) {
+          images = productDetail.productImageData.map((image) => image.image);
+        } else if (productDetail.productImageData) {
+          images.push(productDetail.productImageData.image);
+        }
+        let sizes = [];
+        if (Array.isArray(productDetail.sizeData)) {
+          sizes = productDetail.sizeData.map((size) => size.sizeId);
+        } else if (productDetail.sizeData) {
+          sizes.push(productDetail.sizeData.sizeId);
+        }
+        let colors = [];
+        if (Array.isArray(productDetail.color)) {
+          colors = productDetail.color.map((color) => color);
+        } else if (productDetail.color) {
+          colors.push(productDetail.color);
+        }
+        acc.push({
+          id: product.id,
+          name: product.name,
+          category: product.categoryData.value,
+          view: product.view,
+          originalPrice: productDetail.originalPrice || "",
+          discountPrice: productDetail.discountPrice || "",
+          // brand: product.brandData.value,
+          status: product.statusData.value,
+          images: images,
+          sizes: sizes,
+          colors: colors,
+        });
+      } else {
+        console.log(error);
+      }
+      return acc;
+    }, []);
+    const firstProduct = productsWithDetails[0] || {};
+    // Create a unique object from the first product
+    const combinedProduct = {
+      id: firstProduct.id || "",
+      name: firstProduct.name || "",
+      category: firstProduct.category || "",
+      view: firstProduct.view || "",
+      originalPrice: firstProduct.originalPrice || "",
+      discountPrice: firstProduct.discountPrice || "",
+      // brand: firstProduct.brand || "",
+      status: firstProduct.status || "",
+      images: [],
+      sizes: [],
+      colors: [],
+    };
+    // Add images from all products
+    for (const product of productsWithDetails) {
+      combinedProduct.images.push(...product.images);
+      combinedProduct.sizes.push(...product.sizes);
+      combinedProduct.colors.push(...product.colors);
+    }
+    // Remove duplicate values
+    combinedProduct.images = [...new Set(combinedProduct.images)];
+    combinedProduct.sizes = [...new Set(combinedProduct.sizes)];
+    combinedProduct.colors = [...new Set(combinedProduct.colors)];
     return {
-      result: res.rows,
+      result: [combinedProduct],
       statusCode: 200,
-      errors: ["Get all products successfully!"],
+      errors: ["Get all products by admin successfully!"],
     };
   } catch (error) {
-    console.error("Error get all products:", error);
+    console.error(error);
     return errorResponse(error.message);
   }
 };
@@ -188,82 +321,116 @@ const getAllProductUser = async (data) => {
   }
 };
 
-const getProductById = async (id) => {
+const getProductById = async (data) => {
   try {
-    if (!id) {
+    if (!data || !data.id) {
       return missingRequiredParams("id is");
     }
-    // Fetch product with associated data
-    const product = await db.Product.findOne({
-      where: { id: id },
+
+    const { id } = data;
+
+    // Fetch product details with associated data
+    const productDetails = await db.ProductDetail.findAndCountAll({
       include: [
-        { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
-          model: db.AllCode,
-          as: "categoryData",
-          attributes: ["value", "code"],
+          model: db.ProductImage,
+          as: "productImageData",
+          attributes: ["image"],
         },
-        { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
+        { model: db.ProductSize, as: "sizeData", attributes: ["sizeId"] },
+        {
+          model: db.Product,
+          as: "productData",
+          attributes: ["name", "content", "view"],
+          include: [
+            {
+              model: db.AllCode,
+              as: "brandData",
+              attributes: ["value", "code"],
+            },
+            {
+              model: db.AllCode,
+              as: "categoryData",
+              attributes: ["value", "code"],
+            },
+          ],
+          where: { id: id },
+        },
       ],
+      attributes: ["color", "originalPrice", "discountPrice"], // Include ProductDetail attributes here
       raw: true,
       nest: true,
     });
-    // If product not found, return error
-    if (!product) {
-      return notFound("Product");
+
+    // If no product details found, return error
+    if (!productDetails.rows.length) {
+      return notFound("Product details");
     }
-    // Increment the view count
-    product.view++;
-    await db.Product.update({ view: product.view }, { where: { id: id } });
-    // Fetch product details
-    let productDetail = await db.ProductDetail.findAll({
-      where: { productId: product.id },
+
+    // Extract common properties from the first product detail
+    const firstProductDetail = productDetails.rows[0];
+    const {
+      originalPrice,
+      discountPrice,
+      productData: {
+        name,
+        content,
+        view,
+        brandData: { value: brand },
+        categoryData: { value: category },
+      },
+      productImageData,
+      sizeData,
+    } = firstProductDetail;
+
+    // Initialize arrays for colors, images, and sizes
+    let colors = [];
+    let images = [];
+    let sizes = [];
+
+    // Iterate through each product detail
+    productDetails.rows.forEach((productDetail) => {
+      // Push color to the array if it exists and is not already included
+      if (
+        productDetail.sizeData &&
+        productDetail.sizeData.sizeId &&
+        !sizes.includes(productDetail.sizeData.sizeId)
+      ) {
+        sizes.push(productDetail.sizeData.sizeId);
+      }
+
+      // Push image to the array if it exists
+      if (
+        productDetail.productImageData &&
+        productDetail.productImageData.image
+      ) {
+        images.push(productDetail.productImageData.image);
+      }
+
+      // Push color to the array if it exists
+      if (productDetail.color && !colors.includes(productDetail.color)) {
+        colors.push(productDetail.color);
+      }
     });
-    // Calculate and update stock for each product detail
-    for (let i = 0; i < productDetail.length; i++) {
-      let productImages = await db.ProductImage.findAll({
-        where: { productDetailId: productDetail[i].id },
-      });
-      let productImageUrls = [];
-      for (let j = 0; j < productImages.length; j++) {
-        productImageUrls.push(productImages[j].imageUrl);
-      }
-      let productSizes = await db.ProductSize.findAll({
-        where: { productDetailId: productDetail[i].id },
-        include: [
-          { model: db.AllCode, as: "sizeData", attributes: ["value", "code"] },
-        ],
-        raw: true,
-        nest: true,
-      });
-      for (let k = 0; k < productSizes.length; k++) {
-        let receiptDetails = await db.ReceiptDetail.findAll({
-          where: { sizeId: productSizes[k].id },
-        });
-        let orderDetails = await db.OrderDetail.findAll({
-          where: { productId: productSizes[k].id },
-        });
-        let quantity = 0;
-        for (let g = 0; g < receiptDetails.length; g++) {
-          quantity += receiptDetails[g].quantity;
-        }
-        for (let h = 0; h < orderDetails.length; h++) {
-          let order = await db.Order.findOne({
-            where: { id: orderDetails[h].orderId },
-          });
-          if (order.statusId != "S7") {
-            quantity -= orderDetails[h].quantity;
-          }
-        }
-        productSizes[k].stock = quantity;
-      }
-      productDetail[i].productImage = productImages;
-      productDetail[i].productSize = productSizes;
-    }
+
     return {
-      result: [product],
+      result: [
+        {
+          id,
+          name,
+          content,
+          view,
+          originalPrice,
+          discountPrice,
+          brand,
+          category,
+          images,
+          sizes,
+          colors,
+        },
+      ],
       statusCode: 200,
-      errors: [`Get product with id = ${id} successfully!`],
+      errors: ["Get all product details successfully!"],
     };
   } catch (error) {
     console.error("Error retrieving product details:", error);
@@ -365,38 +532,6 @@ const createProductDetail = async (data) => {
     return successResponse("Created new product detail");
   } catch (error) {
     console.error(error);
-    return errorResponse(error.message);
-  }
-};
-
-const getAllProductDetail = async (data) => {
-  try {
-    if (!data || !data.id || !data.limit || !data.offset) {
-      return missingRequiredParams("id, limit, offset are");
-    }
-    const { id, limit, offset } = data;
-    const objectFilter = {
-      include: [
-        { model: db.ProductImage, as: "productImageData" },
-        { model: db.ProductSize, as: "sizeData" },
-      ],
-      where: { productId: id },
-      limit: +limit,
-      offset: +offset,
-      raw: true,
-    };
-    const productDetails = await db.ProductDetail.findAndCountAll(objectFilter);
-    // Check if product details are found
-    if (!productDetails.rows.length) {
-      return notFound("Product details");
-    }
-    return {
-      result: [productDetails.rows],
-      statusCode: 200,
-      errors: ["Get all product details successfully!"],
-    };
-  } catch (error) {
-    console.error("Error retrieving product details:", error);
     return errorResponse(error.message);
   }
 };
@@ -996,7 +1131,6 @@ export default {
   getProductById,
   updateProduct,
   createProductDetail,
-  getAllProductDetail,
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,

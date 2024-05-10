@@ -82,7 +82,6 @@ const webRoutes = (app) => {
     middlewareControllers.verifyTokenAdmin,
     productController.createProductDetail
   );
-  router.get("/api/product/detail", productController.getAllProductDetail);
   router.get(
     "/api/product/detail/get-by-id",
     productController.getProductDetailById
@@ -144,11 +143,7 @@ const webRoutes = (app) => {
   router.get("/api/product/get-feature", productController.getProductFeature);
   router.get("/api/product/get-new", productController.getProductNew);
   router.get("/api/product/shopcart", productController.getProductShopCart);
-  router.get(
-    "/api/product/recommend",
-    productController.getProductRecommend
-  );
-
+  router.get("/api/product/recommend", productController.getProductRecommend);
 
   //---------------------------API TYPE-SHIP------------------------------//
   router.post(

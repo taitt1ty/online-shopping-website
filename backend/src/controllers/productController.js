@@ -44,7 +44,7 @@ const getAllProductUser = async (req, res) => {
 
 const getProductById = async (req, res) => {
   try {
-    const data = await productService.getProductById(req.query.id);
+    const data = await productService.getProductById(req.query);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
@@ -79,18 +79,6 @@ const updateProduct = async (req, res) => {
 // PRODUCT DETAIL
 const createProductDetail = async (req, res) => {
   await handleRequest(productService.createProductDetail, req, res);
-};
-
-const getAllProductDetail = async (req, res) => {
-  try {
-    const { id, limit, offset } = req.query;
-    const requestData = { id, limit, offset };
-    const data = await productService.getAllProductDetail(requestData);
-    return res.status(data.statusCode).json(data);
-  } catch (error) {
-    console.error("Error handling request:", error);
-    return res.status(500).json(errorResponse("Internal server error"));
-  }
 };
 
 const getProductDetailById = async (req, res) => {
@@ -253,7 +241,6 @@ export default {
   activeProduct,
   updateProduct,
   createProductDetail,
-  getAllProductDetail,
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,
