@@ -1,7 +1,7 @@
 import db from "../models/index";
 import jsrecommender from "js-recommender";
 require("dotenv").config();
-const { Op, QueryTypes } = require("sequelize");
+const { Op } = require("sequelize");
 import {
   successResponse,
   errorResponse,
@@ -88,182 +88,97 @@ const createProduct = async (data) => {
   }
 };
 
-// const getAllProductAdmin = async (data) => {
-//   try {
-//     let objectFilter = {
-//       include: [
-//         { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
-//         {
-//           model: db.AllCode,
-//           as: "categoryData",
-//           attributes: ["value", "code"],
-//         },
-//         { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
-//       ],
-//       raw: true,
-//       nest: true,
-//     };
-//     if (data.limit && data.offset) {
-//       objectFilter.limit = +data.limit;
-//       objectFilter.offset = +data.offset;
-//     }
-//     if (data.categoryId && data.categoryId !== "ALL") {
-//       objectFilter.where = { categoryId: data.categoryId };
-//     }
-//     if (data.brandId && data.brandId !== "ALL") {
-//       objectFilter.where = { ...objectFilter.where, brandId: data.brandId };
-//     }
-//     if (data.sortName === "true") {
-//       objectFilter.order = [["name", "ASC"]];
-//     }
-//     if (data.keyword && data.keyword !== "") {
-//       objectFilter.where = {
-//         ...objectFilter.where,
-//         name: { [Op.substring]: data.keyword },
-//       };
-//     }
-//     let res = await db.Product.findAndCountAll(objectFilter);
-//     if (data.sortPrice && data.sortPrice === "true") {
-//       res.rows.sort(dynamicSortMultiple("price"));
-//     }
-//     return {
-//       result: res.rows,
-//       statusCode: 200,
-//       errors: ["Get all products successfully!"],
-//     };
-//   } catch (error) {
-//     console.error("Error get all products:", error);
-//     return errorResponse(error.message);
-//   }
-// };
-
 const getAllProductAdmin = async (data) => {
   try {
     let objectFilter = {
       include: [
-        // { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
           model: db.AllCode,
           as: "categoryData",
           attributes: ["value", "code"],
         },
-        { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
         {
           model: db.ProductDetail,
           as: "productDetailData",
-          attributes: ["color", "originalPrice", "discountPrice"],
+          attributes: ["originalPrice", "discountPrice"],
           include: [
             {
               model: db.ProductImage,
               as: "productImageData",
               attributes: ["image"],
             },
-            {
-              model: db.ProductSize,
-              as: "sizeData",
-              attributes: ["sizeId"],
-            },
           ],
         },
+        {
+          model: db.AllCode,
+          as: "brandData",
+          attributes: ["value", "code"],
+        },
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["value", "code"],
+        },
       ],
+      attributes: ["id", "name", "categoryId", "view"],
       raw: true,
       nest: true,
     };
+    // Filtering and sorting conditions
     if (data.limit && data.offset) {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
     if (data.categoryId && data.categoryId !== "ALL") {
-      objectFilter.where = { categoryId: data.categoryId };
+      objectFilter.where.categoryId = data.categoryId;
     }
     if (data.brandId && data.brandId !== "ALL") {
-      objectFilter.where = { ...objectFilter.where, brandId: data.brandId };
+      objectFilter.where.brandId = data.brandId;
+    }
+    if (data.statusId && data.statusId !== "ALL") {
+      objectFilter.where.statusId = data.statusId;
     }
     if (data.sortName === "true") {
       objectFilter.order = [["name", "ASC"]];
     }
     if (data.keyword && data.keyword !== "") {
-      objectFilter.where = {
-        ...objectFilter.where,
-        name: { [Op.substring]: data.keyword },
-      };
+      objectFilter.where.name = { [Op.substring]: data.keyword };
     }
     let res = await db.Product.findAndCountAll(objectFilter);
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
     const productsWithDetails = res.rows.reduce((acc, product) => {
-      const productDetail = product.productDetailData;
-      if (
-        productDetail &&
-        typeof productDetail === "object" &&
-        Object.keys(productDetail).length > 0
-      ) {
-        let images = [];
-        if (Array.isArray(productDetail.productImageData)) {
-          images = productDetail.productImageData.map((image) => image.image);
-        } else if (productDetail.productImageData) {
-          images.push(productDetail.productImageData.image);
-        }
-        let sizes = [];
-        if (Array.isArray(productDetail.sizeData)) {
-          sizes = productDetail.sizeData.map((size) => size.sizeId);
-        } else if (productDetail.sizeData) {
-          sizes.push(productDetail.sizeData.sizeId);
-        }
-        let colors = [];
-        if (Array.isArray(productDetail.color)) {
-          colors = productDetail.color.map((color) => color);
-        } else if (productDetail.color) {
-          colors.push(productDetail.color);
+      if (!acc.find((item) => item.id === product.id)) {
+        const productDetail = product.productDetailData;
+        const brand = product.brandData ? product.brandData.value : "";
+        const status = product.statusData ? product.statusData.value : "";
+        let image = "";
+        if (productDetail && productDetail.productImageData) {
+          const firstImage = Array.isArray(productDetail.productImageData)
+            ? productDetail.productImageData[0]
+            : productDetail.productImageData;
+          image = firstImage ? firstImage.image : "";
         }
         acc.push({
           id: product.id,
           name: product.name,
           category: product.categoryData.value,
           view: product.view,
+          brand: brand,
+          status: status,
+          image: image,
           originalPrice: productDetail.originalPrice || "",
           discountPrice: productDetail.discountPrice || "",
-          // brand: product.brandData.value,
-          status: product.statusData.value,
-          images: images,
-          sizes: sizes,
-          colors: colors,
         });
-      } else {
-        console.log(error);
       }
       return acc;
     }, []);
-    const firstProduct = productsWithDetails[0] || {};
-    // Create a unique object from the first product
-    const combinedProduct = {
-      id: firstProduct.id || "",
-      name: firstProduct.name || "",
-      category: firstProduct.category || "",
-      view: firstProduct.view || "",
-      originalPrice: firstProduct.originalPrice || "",
-      discountPrice: firstProduct.discountPrice || "",
-      // brand: firstProduct.brand || "",
-      status: firstProduct.status || "",
-      images: [],
-      sizes: [],
-      colors: [],
-    };
-    // Add images from all products
-    for (const product of productsWithDetails) {
-      combinedProduct.images.push(...product.images);
-      combinedProduct.sizes.push(...product.sizes);
-      combinedProduct.colors.push(...product.colors);
-    }
-    // Remove duplicate values
-    combinedProduct.images = [...new Set(combinedProduct.images)];
-    combinedProduct.sizes = [...new Set(combinedProduct.sizes)];
-    combinedProduct.colors = [...new Set(combinedProduct.colors)];
+
     return {
-      result: [combinedProduct],
+      result: productsWithDetails,
       statusCode: 200,
-      errors: ["Get all products by admin successfully!"],
+      errors: ["Get all products by user successfully!"],
     };
   } catch (error) {
     console.error(error);
@@ -276,47 +191,86 @@ const getAllProductUser = async (data) => {
     let objectFilter = {
       where: { statusId: "S1" },
       include: [
-        { model: db.AllCode, as: "brandData", attributes: ["value", "code"] },
         {
           model: db.AllCode,
           as: "categoryData",
           attributes: ["value", "code"],
         },
-        { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
+        {
+          model: db.ProductDetail,
+          as: "productDetailData",
+          attributes: ["originalPrice", "discountPrice"],
+          include: [
+            {
+              model: db.ProductImage,
+              as: "productImageData",
+              attributes: ["image"],
+            },
+          ],
+        },
+        {
+          model: db.AllCode,
+          as: "brandData",
+          attributes: ["value", "code"],
+        },
       ],
+      attributes: ["id", "name", "categoryId", "view"],
       raw: true,
       nest: true,
     };
+    // Filtering and sorting conditions
     if (data.limit && data.offset) {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
     if (data.categoryId && data.categoryId !== "ALL") {
-      objectFilter.where = { categoryId: data.categoryId };
+      objectFilter.where.categoryId = data.categoryId;
     }
     if (data.brandId && data.brandId !== "ALL") {
-      objectFilter.where = { ...objectFilter.where, brandId: data.brandId };
+      objectFilter.where.brandId = data.brandId;
     }
     if (data.sortName === "true") {
       objectFilter.order = [["name", "ASC"]];
     }
     if (data.keyword && data.keyword !== "") {
-      objectFilter.where = {
-        ...objectFilter.where,
-        name: { [Op.substring]: data.keyword },
-      };
+      objectFilter.where.name = { [Op.substring]: data.keyword };
     }
     let res = await db.Product.findAndCountAll(objectFilter);
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
+    const productsWithDetails = res.rows.reduce((acc, product) => {
+      if (!acc.find((item) => item.id === product.id)) {
+        const productDetail = product.productDetailData;
+        const brand = product.brandData ? product.brandData.value : "";
+        let image = "";
+        if (productDetail && productDetail.productImageData) {
+          const firstImage = Array.isArray(productDetail.productImageData)
+            ? productDetail.productImageData[0]
+            : productDetail.productImageData;
+          image = firstImage ? firstImage.image : "";
+        }
+        acc.push({
+          id: product.id,
+          name: product.name,
+          category: product.categoryData.value,
+          view: product.view,
+          brand: brand,
+          image: image,
+          originalPrice: productDetail.originalPrice || "",
+          discountPrice: productDetail.discountPrice || "",
+        });
+      }
+      return acc;
+    }, []);
+
     return {
-      result: res.rows,
+      result: productsWithDetails,
       statusCode: 200,
-      errors: ["Get all products successfully!"],
+      errors: ["Get all products by user successfully!"],
     };
   } catch (error) {
-    console.error("Error get all products:", error);
+    console.error(error);
     return errorResponse(error.message);
   }
 };
