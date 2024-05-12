@@ -1,5 +1,5 @@
 import productService from "../services/productService";
-import { errorResponse } from "../utils/ResponseUtils";
+import { errorResponse, successResponse } from "../utils/ResponseUtils";
 
 const handleRequest = async (handler, req, res) => {
   try {
@@ -106,6 +106,26 @@ const deleteProductDetail = async (req, res) => {
 };
 
 // PRODUCT IMAGE
+
+const uploadProductImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(missingRequiredParams("File"));
+    }
+
+    const { productDetailId } = req.body;
+    const imagePath = req.file.path;
+
+    await productService.saveProductImage(productDetailId, imagePath);
+    return res
+      .status(200)
+      .json(successResponse("Uploaded and created new product image"));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse());
+  }
+};
+
 const createProductImage = async (req, res) => {
   await handleRequest(productService.createProductImage, req, res);
 };
@@ -244,6 +264,7 @@ export default {
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,
+  uploadProductImage,
   createProductImage,
   getAllProductImage,
   getProductImageById,

@@ -2,6 +2,8 @@ import db from "../models/index";
 import jsrecommender from "js-recommender";
 require("dotenv").config();
 const { Op } = require("sequelize");
+const fs = require("fs");
+const path = require("path");
 import {
   successResponse,
   errorResponse,
@@ -581,6 +583,29 @@ const deleteProductDetail = async (data) => {
 };
 
 // PRODUCT IMAGE
+const uploadProductImage = async (file) => {
+  const uploadDirectory = "./uploads";
+
+  if (!fs.existsSync(uploadDirectory)) {
+    fs.mkdirSync(uploadDirectory);
+  }
+
+  const fileExtension = path.extname(file.name);
+  const fileName = `${Date.now()}${fileExtension}`;
+  const filePath = path.join(uploadDirectory, fileName);
+
+  await file.mv(filePath);
+
+  return filePath;
+};
+
+const saveProductImage = async (productDetailId, imagePath) => {
+  await db.ProductImage.create({
+    productDetailId: productDetailId,
+    image: imagePath,
+  });
+};
+
 const createProductImage = async (data) => {
   try {
     if (!data.image || !data.productDetailId) {
@@ -1088,6 +1113,8 @@ export default {
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,
+  uploadProductImage,
+  saveProductImage,
   createProductImage,
   getAllProductImage,
   getProductImageById,

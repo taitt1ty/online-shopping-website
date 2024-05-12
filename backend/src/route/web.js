@@ -12,6 +12,8 @@ import orderController from "../controllers/orderController";
 import statisticController from "../controllers/statisticController";
 import addressUserController from "../controllers/addressUserController";
 
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const webRoutes = (app) => {
   const router = express.Router();
   //---------------------------API USER------------------------------//
@@ -98,6 +100,12 @@ const webRoutes = (app) => {
   );
 
   // PRODUCT IMAGE
+  router.post(
+    "/api/product/upload-file",
+    middlewareControllers.verifyTokenAdmin,
+    upload.single("image"),
+    productController.uploadProductImage
+  );
   router.post(
     "/api/product/image/create",
     middlewareControllers.verifyTokenAdmin,
