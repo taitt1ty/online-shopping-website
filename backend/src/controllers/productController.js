@@ -1,5 +1,9 @@
 import productService from "../services/productService";
-import { errorResponse, successResponse } from "../utils/ResponseUtils";
+import {
+  errorResponse,
+  successResponse,
+  missingRequiredParams,
+} from "../utils/ResponseUtils";
 
 const handleRequest = async (handler, req, res) => {
   try {
@@ -112,7 +116,6 @@ const uploadProductImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).json(missingRequiredParams("File"));
     }
-
     const { productDetailId } = req.body;
     const imagePath = req.file.path;
 
@@ -124,10 +127,6 @@ const uploadProductImage = async (req, res) => {
     console.error(error);
     return res.status(500).json(errorResponse());
   }
-};
-
-const createProductImage = async (req, res) => {
-  await handleRequest(productService.createProductImage, req, res);
 };
 
 const getAllProductImage = async (req, res) => {
@@ -151,25 +150,55 @@ const getAllProductImage = async (req, res) => {
 
 const getProductImageById = async (req, res) => {
   try {
-    const data = await productService.getProductImageById(req.query.id);
+    const { id } = req.query;
+    if (!id) {
+      return res
+        .status(400)
+        .json(errorResponse("Missing required parameter: id"));
+    }
+    const data = await productService.getProductImageById(id);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
-    return res.status(500).json(errorResponse("Error from server"));
+    return res
+      .status(500)
+      .json(errorResponse("Failed to retrieve product image"));
   }
 };
 
 const updateProductImage = async (req, res) => {
-  await handleRequest(productService.updateProductImage, req, res);
+  try {
+    const id = req.body.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json(missingRequiredParams("File"));
+    }
+    const imagePath = file.path;
+    await productService.updateProductImage(id, imagePath);
+
+    return res.status(200).json(successResponse("Updated product image"));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse());
+  }
 };
 
 const deleteProductImage = async (req, res) => {
   try {
-    const data = await productService.deleteProductImage(req.query.id);
+    const { id } = req.query;
+    if (!id) {
+      return res
+        .status(400)
+        .json(errorResponse("Missing required parameter: id"));
+    }
+    const data = await productService.deleteProductImage(id);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
-    return res.status(500).json(errorResponse("Error from server"));
+    return res
+      .status(500)
+      .json(errorResponse("Failed to delete product image"));
   }
 };
 
@@ -265,7 +294,6 @@ export default {
   updateProductDetail,
   deleteProductDetail,
   uploadProductImage,
-  createProductImage,
   getAllProductImage,
   getProductImageById,
   updateProductImage,

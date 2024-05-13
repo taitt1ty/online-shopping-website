@@ -606,37 +606,39 @@ const saveProductImage = async (productDetailId, imagePath) => {
   });
 };
 
-const createProductImage = async (data) => {
-  try {
-    if (!data.image || !data.productDetailId) {
-      return missingRequiredParams("image, productDetail are");
-    }
-    const productImage = await db.ProductImage.create({
-      productDetailId: data.productDetailId,
-      image: data.image,
-    });
-    return successResponse("Created new product image");
-  } catch (error) {
-    console.error(error);
-    return errorResponse(error.message);
-  }
-};
-
 const getAllProductImage = async (data) => {
   try {
     if (!data.id || !data.limit || !data.offset) {
       return missingRequiredParams("id, limit, or offset are");
     }
-    let productImage = await db.ProductImage.findAndCountAll({
+    let productImages = await db.ProductImage.findAll({
       where: { productDetailId: data.id },
       limit: +data.limit,
       offset: +data.offset,
     });
-    if (!productImage.rows || productImage.rows.length === 0) {
+    if (!productImages || productImages.length === 0) {
       return notFound("Product image");
     }
+
+    // Group images by productDetailId
+    const groupedImages = productImages.reduce((acc, image) => {
+      if (!acc[image.productDetailId]) {
+        acc[image.productDetailId] = [];
+      }
+      acc[image.productDetailId].push(image.image);
+      return acc;
+    }, {});
+
+    // Convert the grouping result into an array of new objects
+    const result = Object.entries(groupedImages).map(
+      ([productDetailId, images]) => ({
+        productDetailId: +productDetailId,
+        image: images,
+      })
+    );
+
     return {
-      result: [productImage.rows],
+      result: result,
       statusCode: 200,
       errors: ["Get all product images successfully"],
     };
@@ -651,9 +653,7 @@ const getProductImageById = async (id) => {
     if (!id) {
       return missingRequiredParams("id");
     }
-    let productDetailImage = await db.ProductImage.findOne({
-      where: { id: id },
-    });
+    const productDetailImage = await db.ProductImage.findByPk(id);
     if (!productDetailImage) {
       return notFound("Product image");
     }
@@ -668,21 +668,45 @@ const getProductImageById = async (id) => {
   }
 };
 
-const updateProductImage = async (data) => {
+const updateProductImage = async (id, imagePath) => {
   try {
-    if (!data.id || !data.image) {
-      return missingRequiredParams("id or image");
+    const uploadDirectory = "./uploads";
+
+    if (!fs.existsSync(uploadDirectory)) {
+      fs.mkdirSync(uploadDirectory);
     }
-    let productImage = await db.ProductImage.findOne({
-      where: { id: data.id },
-      raw: false,
+
+    const fileExtension = path.extname(imagePath);
+    const fileName = `${Date.now()}${fileExtension}`;
+    const filePath = path.join(uploadDirectory, fileName);
+
+    fs.renameSync(imagePath, filePath);
+
+    const existingProductImage = await db.ProductImage.findOne({
+      where: { id: id },
     });
-    if (!productImage) {
-      return notFound("product image");
+    console.log(existingProductImage);
+    if (
+      !existingProductImage ||
+      !(existingProductImage instanceof db.ProductImage)
+    ) {
+      console.error(
+        "existingProductImage is not a valid Sequelize Model instance."
+      );
+      return notFound("Product image");
     }
-    productImage.image = data.image;
-    await productImage.save();
-    return successResponse(`Updated product image with id = ${data.id}`);
+
+    // Delete old images before updating
+    if (
+      existingProductImage.image &&
+      fs.existsSync(existingProductImage.image)
+    ) {
+      fs.unlinkSync(existingProductImage.image);
+    }
+    existingProductImage.image = filePath;
+
+    await existingProductImage.save();
+    return successResponse(`Updated product image with ID = ${id}`);
   } catch (error) {
     console.error(error);
     return errorResponse(error.message);
@@ -694,19 +718,14 @@ const deleteProductImage = async (id) => {
     if (!id) {
       return missingRequiredParams("id is");
     }
-    let productImage = await db.ProductImage.findOne({
-      where: { id: id },
-      raw: false,
-    });
-    if (productImage) {
-      await db.ProductImage.destroy({
-        where: { id: id },
-      });
-      return successResponse(`Deleted product image with id = ${id}`);
-    } else {
+    const productImage = await db.ProductImage.findByPk(id);
+    if (!productImage) {
       return notFound("Product image");
     }
+    await productImage.destroy();
+    return successResponse(`Deleted product image with id = ${id}`);
   } catch (error) {
+    console.error("Error deleting product image", error);
     return errorResponse(error.message);
   }
 };
@@ -1115,7 +1134,7 @@ export default {
   deleteProductDetail,
   uploadProductImage,
   saveProductImage,
-  createProductImage,
+  // createProductImage,
   getAllProductImage,
   getProductImageById,
   updateProductImage,
