@@ -12,47 +12,56 @@ const addShopCart = async (data) => {
     }
     // Function to calculate available stock
     const calculateStock = async (sizeId) => {
-      let receiptDetail = await db.ReceiptDetail.findAll({ where: { sizeId } });
-      let orderDetail = await db.OrderDetail.findAll({
-        where: { productId: sizeId },
-      });
-      let quantity = 0;
-      for (let j = 0; j < receiptDetail.length; j++) {
-        quantity += receiptDetail[j].quantity;
-      }
-      for (let k = 0; k < orderDetail.length; k++) {
-        let order = await db.Order.findOne({
-          where: { id: orderDetail[k].orderId },
+      try {
+        let receiptDetail = await db.ReceiptDetail.findAll({
+          where: { sizeId },
         });
-        if (order.statusId != "S7") {
-          quantity -= orderDetail[k].quantity;
+        // let orderDetail = await db.OrderDetail.findAll({
+        //   where: { productId: sizeId },
+        // });
+        let quantity = 0;
+
+        for (let j = 0; j < receiptDetail.length; j++) {
+          quantity += receiptDetail[j].quantity;
         }
+
+        // for (let k = 0; k < orderDetail.length; k++) {
+        //   let order = await db.Order.findOne({
+        //     where: { id: orderDetail[k].orderId },
+        //   });
+        //   if (order && order.statusId != "S7") {
+        //     quantity -= orderDetail[k].quantity;
+        //   }
+        // }
+        return quantity;
+      } catch (err) {
+        console.error("Error calculating stock:", err);
+        throw new Error("Error calculating stock");
       }
-      return quantity;
     };
     // Check if the cart already exists
-    const cart = await db.ShopCart.findOne({
-      where: { userId: data.userId, sizeId: data.sizeId, statusId: 0 },
-      raw: false,
-    });
+    // const cart = await db.ShopCart.findOne({
+    //   where: { userId: data.userId, sizeId: data.sizeId, statusId: 0 },
+    //   raw: false,
+    // });
     // Check stock availability
     const stock = await calculateStock(data.sizeId);
-    if (cart) {
-      if (data.type === "UPDATE_QUANTITY") {
+    // if (cart) {
+    //   if (data.type === "UPDATE_QUANTITY") {
         if (+data.quantity > stock) {
           return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
-        } else {
-          cart.quantity = +data.quantity;
-          await cart.save();
-        }
-      } else {
-        if (+cart.quantity + +data.quantity > stock) {
-          return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
-        } else {
-          cart.quantity += +data.quantity;
-          await cart.save();
-        }
-      }
+    //     } else {
+    //       cart.quantity = +data.quantity;
+    //       await cart.save();
+    //     }
+    //   } else {
+    //     if (+cart.quantity + +data.quantity > stock) {
+    //       return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
+    //     } else {
+    //       cart.quantity += +data.quantity;
+    //       await cart.save();
+    //     }
+    //   }
     } else {
       if (data.quantity > stock) {
         return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
