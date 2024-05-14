@@ -101,10 +101,10 @@ const webRoutes = (app) => {
 
   // PRODUCT IMAGE
   router.post(
-    "/api/product/upload-file",
+    "/api/product/upload-files",
     middlewareControllers.verifyTokenAdmin,
-    upload.single("image"),
-    productController.uploadProductImage
+    upload.array("images"),
+    productController.uploadProductImages
   );
   router.get("/api/product/image", productController.getAllProductImage);
   router.get(
@@ -114,7 +114,7 @@ const webRoutes = (app) => {
   router.put(
     "/api/product/image/update",
     middlewareControllers.verifyTokenAdmin,
-    upload.single("image"),
+    upload.array("images"),
     productController.updateProductImage
   );
   router.delete(

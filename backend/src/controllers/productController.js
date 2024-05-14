@@ -111,18 +111,24 @@ const deleteProductDetail = async (req, res) => {
 
 // PRODUCT IMAGE
 
-const uploadProductImage = async (req, res) => {
+const uploadProductImages = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json(missingRequiredParams("File"));
+    console.log("Request received:", req.body, req.files);
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json(missingRequiredParams("Files"));
     }
     const { productDetailId } = req.body;
-    const imagePath = req.file.path;
+    const files = req.files;
 
-    await productService.saveProductImage(productDetailId, imagePath);
+    const imagePaths = await productService.uploadFiles(files);
+
+    await productService.saveProductImages(productDetailId, imagePaths);
+
+    console.log("Product images uploaded successfully");
     return res
       .status(200)
-      .json(successResponse("Uploaded and created new product image"));
+      .json(successResponse("Uploaded and created new product images"));
   } catch (error) {
     console.error(error);
     return res.status(500).json(errorResponse());
@@ -293,7 +299,7 @@ export default {
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,
-  uploadProductImage,
+  uploadProductImages,
   getAllProductImage,
   getProductImageById,
   updateProductImage,

@@ -583,27 +583,32 @@ const deleteProductDetail = async (data) => {
 };
 
 // PRODUCT IMAGE
-const uploadProductImage = async (file) => {
+const uploadFiles = async (files) => {
   const uploadDirectory = "./uploads";
 
   if (!fs.existsSync(uploadDirectory)) {
     fs.mkdirSync(uploadDirectory);
   }
 
-  const fileExtension = path.extname(file.name);
-  const fileName = `${Date.now()}${fileExtension}`;
-  const filePath = path.join(uploadDirectory, fileName);
+  const fileUploadPromises = files.map(async (file) => {
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${Date.now()}${fileExtension}`;
+    const filePath = path.join(uploadDirectory, fileName);
 
-  await file.mv(filePath);
+    await fs.promises.rename(file.path, filePath); // Sử dụng fs.promises để di chuyển tệp
+    return filePath;
+  });
 
-  return filePath;
+  return Promise.all(fileUploadPromises);
 };
 
-const saveProductImage = async (productDetailId, imagePath) => {
-  await db.ProductImage.create({
-    productDetailId: productDetailId,
+const saveProductImages = async (productDetailId, imagePaths) => {
+  const imageRecords = imagePaths.map((imagePath) => ({
+    productDetailId,
     image: imagePath,
-  });
+  }));
+
+  await db.ProductImage.bulkCreate(imageRecords);
 };
 
 const getAllProductImage = async (data) => {
@@ -1132,9 +1137,8 @@ export default {
   getProductDetailById,
   updateProductDetail,
   deleteProductDetail,
-  uploadProductImage,
-  saveProductImage,
-  // createProductImage,
+  uploadFiles,
+  saveProductImages,
   getAllProductImage,
   getProductImageById,
   updateProductImage,
