@@ -15,6 +15,7 @@ const createReceipt = async (data) => {
 
     const receipt = await db.Receipt.create({ userId, supplierId });
     if (receipt) {
+      
       await db.ReceiptDetail.create({
         receiptId: receipt.id,
         sizeId,

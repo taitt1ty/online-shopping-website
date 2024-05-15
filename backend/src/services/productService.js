@@ -2,7 +2,7 @@ import db from "../models/index";
 import jsrecommender from "js-recommender";
 require("dotenv").config();
 const { Op } = require("sequelize");
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 import {
   successResponse,
@@ -291,9 +291,9 @@ const getProductById = async (data) => {
         {
           model: db.ProductImage,
           as: "productImageData",
-          attributes: ["image"],
+          attributes: ["id", "image"],
         },
-        { model: db.ProductSize, as: "sizeData", attributes: ["sizeId"] },
+        { model: db.ProductSize, as: "sizeData", attributes: ["id", "sizeId"] },
         {
           model: db.Product,
           as: "productData",
@@ -313,7 +313,7 @@ const getProductById = async (data) => {
           where: { id: id },
         },
       ],
-      attributes: ["color", "originalPrice", "discountPrice"], // Include ProductDetail attributes here
+      attributes: ["color", "originalPrice", "discountPrice"],
       raw: true,
       nest: true,
     });
@@ -335,8 +335,6 @@ const getProductById = async (data) => {
         brandData: { value: brand },
         categoryData: { value: category },
       },
-      productImageData,
-      sizeData,
     } = firstProductDetail;
 
     // Initialize arrays for colors, images, and sizes
@@ -346,26 +344,39 @@ const getProductById = async (data) => {
 
     // Iterate through each product detail
     productDetails.rows.forEach((productDetail) => {
-      // Push color to the array if it exists and is not already included
+      // Push size to the array if it exists and is not already included
       if (
         productDetail.sizeData &&
         productDetail.sizeData.sizeId &&
-        !sizes.includes(productDetail.sizeData.sizeId)
+        !sizes.some((size) => size.id === productDetail.sizeData.id)
       ) {
-        sizes.push(productDetail.sizeData.sizeId);
+        sizes.push({
+          id: productDetail.sizeData.id,
+          name: productDetail.sizeData.sizeId,
+        });
       }
 
       // Push image to the array if it exists
       if (
         productDetail.productImageData &&
-        productDetail.productImageData.image
+        productDetail.productImageData.image &&
+        !images.some((image) => image.id === productDetail.productImageData.id)
       ) {
-        images.push(productDetail.productImageData.image);
+        images.push({
+          id: productDetail.productImageData.id,
+          name: productDetail.productImageData.image,
+        });
       }
 
-      // Push color to the array if it exists
-      if (productDetail.color && !colors.includes(productDetail.color)) {
-        colors.push(productDetail.color);
+      // Push color to the array if it exists and is not already included
+      if (
+        productDetail.color &&
+        !colors.some((color) => color.name === productDetail.color)
+      ) {
+        colors.push({
+          id: colors.length + 1, // Generate a unique id for the color
+          name: productDetail.color,
+        });
       }
     });
 
@@ -583,11 +594,44 @@ const deleteProductDetail = async (data) => {
 };
 
 // PRODUCT IMAGE
+
+// const uploadFiles = async (files) => {
+//   const uploadDirectory = "./uploads";
+
+//   try {
+//     await fs.access(uploadDirectory);
+//   } catch (error) {
+//     await fs.mkdir(uploadDirectory);
+//   }
+
+//   const fileUploadPromises = files.map(async (file) => {
+//     const fileExtension = path.extname(file.originalname);
+//     const fileName = `${Date.now()}${fileExtension}`;
+//     const filePath = path.join(uploadDirectory, fileName);
+
+//     await fs.rename(file.path, filePath);
+//     return fileName;
+//   });
+
+//   return Promise.all(fileUploadPromises);
+// };
+
+// const saveProductImages = async (productDetailId, imagePaths) => {
+//   const imageRecords = imagePaths.map((imagePath) => ({
+//     productDetailId,
+//     image: imagePath,
+//   }));
+
+//   await db.ProductImage.bulkCreate(imageRecords);
+// };
+
 const uploadFiles = async (files) => {
   const uploadDirectory = "./uploads";
 
-  if (!fs.existsSync(uploadDirectory)) {
-    fs.mkdirSync(uploadDirectory);
+  try {
+    await fs.access(uploadDirectory);
+  } catch (error) {
+    await fs.mkdir(uploadDirectory);
   }
 
   const fileUploadPromises = files.map(async (file) => {
@@ -595,8 +639,8 @@ const uploadFiles = async (files) => {
     const fileName = `${Date.now()}${fileExtension}`;
     const filePath = path.join(uploadDirectory, fileName);
 
-    await fs.promises.rename(file.path, filePath); // Sử dụng fs.promises để di chuyển tệp
-    return filePath;
+    await fs.rename(file.path, filePath);
+    return fileName;
   });
 
   return Promise.all(fileUploadPromises);
