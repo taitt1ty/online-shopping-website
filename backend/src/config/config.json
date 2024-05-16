@@ -1,7 +1,7 @@
 {
     "development": {
       "username": "root",
-      "password": null,
+      "password": "test",
       "database": "online-shopping-website",
       "host": "localhost",
       "dialect": "mysql",
@@ -13,14 +13,14 @@
     },
     "test": {
       "username": "root",
-      "password": null,
+      "password": "test",
       "database": "database_test",
       "host": "localhost",
       "dialect": "mysql"
     },
     "production": {
       "username": "root",
-      "password": null,
+      "password": "test",
       "database": "database_production",
       "host": "localhost",
       "dialect": "mysql"
