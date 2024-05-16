@@ -258,11 +258,6 @@ const webRoutes = (app) => {
     middlewareControllers.verifyTokenAdmin,
     receiptController.deleteReceipt
   );
-  router.post(
-    "/api/receipt-detail/create",
-    middlewareControllers.verifyTokenAdmin,
-    receiptController.createReceiptDetail
-  );
 
   //---------------------------API SHOP-CART------------------------------//
   router.post("/api/shop-cart/add", shopCartController.addShopCart);

@@ -15,7 +15,6 @@ const createReceipt = async (data) => {
 
     const receipt = await db.Receipt.create({ userId, supplierId });
     if (receipt) {
-      
       await db.ReceiptDetail.create({
         receiptId: receipt.id,
         sizeId,
@@ -31,27 +30,6 @@ const createReceipt = async (data) => {
   }
 };
 
-const createReceiptDetail = async (data) => {
-  try {
-    const { receiptId, sizeId, quantity, price } = data;
-    if (!receiptId || !sizeId || !quantity || !price) {
-      return errorResponse("Missing required parameters!");
-    }
-
-    await db.ReceiptDetail.create({
-      receiptId,
-      sizeId,
-      quantity,
-      price,
-    });
-
-    return successResponse("Receipt detail created");
-  } catch (error) {
-    console.error("Error in createReceiptDetail:", error);
-    return errorResponse("Failed to create receipt detail");
-  }
-};
-
 const getReceiptById = async (id) => {
   try {
     if (!id) {
@@ -59,42 +37,32 @@ const getReceiptById = async (id) => {
     }
 
     const receipt = await db.Receipt.findOne({ where: { id } });
+
     if (!receipt) {
       return notFound(`Receipt ${id} not found`);
     }
 
-    const receiptDetail = await db.ReceiptDetail.findAll({
-      where: { receiptId: id },
+    const supplier = await db.Supplier.findOne({
+      where: { id: receipt.supplierId },
+      attributes: ["email", "name"],
     });
-    if (receiptDetail && receiptDetail.length > 0) {
-      for (let i = 0; i < receiptDetail.length; i++) {
-        const productSize = await db.ProductSize.findOne({
-          where: { id: receiptDetail[i].sizeId },
-          include: [
-            {
-              model: db.AllCode,
-              as: "sizeData",
-              attributes: ["value", "code"],
-            },
-          ],
-          raw: true,
-          nest: true,
-        });
-        if (productSize) {
-          receiptDetail[i].sizeData = productSize;
-          receiptDetail[i].productDetailData = await db.ProductDetail.findOne({
-            where: { id: productSize.productDetailId },
-          });
-          if (receiptDetail[i].productDetailData) {
-            receiptDetail[i].productData = await db.Product.findOne({
-              where: { id: receiptDetail[i].productDetailData.productId },
-            });
-          }
-        }
-      }
+
+    if (!supplier) {
+      return notFound(`Supplier for receipt ${id} not found`);
     }
+
+    const formattedReceipt = {
+      id: receipt.id,
+      supplier: {
+        email: supplier.email,
+        name: supplier.name,
+      },
+      createdAt: receipt.createdAt,
+      updatedAt: receipt.updatedAt,
+    };
+
     return {
-      result: [receipt],
+      result: [formattedReceipt],
       statusCode: 200,
       errors: [`Receipt ${id} found successfully!`],
     };
@@ -116,19 +84,27 @@ const getAllReceipt = async (data) => {
     const receiptData = [];
     for (let i = 0; i < receipts.rows.length; i++) {
       const receipt = receipts.rows[i];
-      const userData = await db.User.findOne({
-        where: { id: receipt.userId },
-        attributes: ["id", "email", "phoneNumber", "fullName", "address"],
-      });
       const supplierData = await db.Supplier.findOne({
         where: { id: receipt.supplierId },
-        attributes: ["id", "email", "name"],
+        attributes: ["email", "name"],
       });
-      receiptData.push({ receipt, userData, supplierData });
+      const formattedReceipt = {
+        receipt: {
+          id: receipt.id,
+          supplier: {
+            email: supplierData.email,
+            name: supplierData.name,
+          },
+          createdAt: receipt.createdAt,
+          updatedAt: receipt.updatedAt,
+        },
+      };
+
+      receiptData.push(formattedReceipt);
     }
 
     return {
-      result: [receiptData],
+      result: receiptData,
       statusCode: 200,
       errors: ["All receipts retrieved successfully!"],
     };
@@ -182,9 +158,8 @@ const deleteReceipt = async (data) => {
   }
 };
 
-module.exports = {
+export default {
   createReceipt,
-  createReceiptDetail,
   getReceiptById,
   getAllReceipt,
   updateReceipt,

@@ -1,10 +1,6 @@
 const jwt = require("jsonwebtoken");
 import db from "../models/index";
-import {
-  errorResponse,
-  userNotExist,
-  notValid,
-} from "../utils/ResponseUtils";
+import { errorResponse, userNotExist, notValid } from "../utils/ResponseUtils";
 require("dotenv").config();
 const secretString = process.env.JWT_SECRET;
 const refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
@@ -51,6 +47,7 @@ const middlewareControllers = {
         return res.status(404).json(userNotExist());
       }
       if (user && (user.roleId == "R4" || user.roleId == "R1")) {
+        //R1: Admin
         req.user = user;
         next();
       } else {

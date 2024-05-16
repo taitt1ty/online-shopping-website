@@ -5,76 +5,54 @@ import {
   missingRequiredParams,
 } from "../utils/ResponseUtils";
 
-const addShopCart = async (data) => {
+const calculateStock = async (sizeId, orderDetails) => {
+  try {
+    // Find all receipt details for the specified sizeId
+    const receiptDetails = await db.ReceiptDetail.findAll({
+      where: { sizeId },
+    });
+
+    // Calculate total quantity from receipt details
+    let totalQuantity = 0;
+    for (const receipt of receiptDetails) {
+      totalQuantity += receipt.quantity;
+    }
+
+    // Subtract quantities from orders if orderDetails exist
+    if (Array.isArray(orderDetails)) {
+      for (const order of orderDetails) {
+        if (order && order.statusId !== "S7" && order.sizeId === sizeId) {
+          totalQuantity -= order.quantity;
+        }
+      }
+    }
+
+    return totalQuantity;
+  } catch (error) {
+    console.error("Error calculating stock:", error);
+    throw new Error("Error calculating stock");
+  }
+};
+
+const addShopCart = async (data, orderDetails) => {
   try {
     if (!data.userId || !data.sizeId || !data.quantity) {
       return missingRequiredParams("user, size, quantity are");
     }
-    // Function to calculate available stock
-    const calculateStock = async (sizeId) => {
-      try {
-        let receiptDetail = await db.ReceiptDetail.findAll({
-          where: { sizeId },
-        });
-        // let orderDetail = await db.OrderDetail.findAll({
-        //   where: { productId: sizeId },
-        // });
-        let quantity = 0;
 
-        for (let j = 0; j < receiptDetail.length; j++) {
-          quantity += receiptDetail[j].quantity;
-        }
+    const stock = await calculateStock(data.sizeId, orderDetails);
 
-        // for (let k = 0; k < orderDetail.length; k++) {
-        //   let order = await db.Order.findOne({
-        //     where: { id: orderDetail[k].orderId },
-        //   });
-        //   if (order && order.statusId != "S7") {
-        //     quantity -= orderDetail[k].quantity;
-        //   }
-        // }
-        return quantity;
-      } catch (err) {
-        console.error("Error calculating stock:", err);
-        throw new Error("Error calculating stock");
-      }
-    };
-    // Check if the cart already exists
-    // const cart = await db.ShopCart.findOne({
-    //   where: { userId: data.userId, sizeId: data.sizeId, statusId: 0 },
-    //   raw: false,
-    // });
-    // Check stock availability
-    const stock = await calculateStock(data.sizeId);
-    // if (cart) {
-    //   if (data.type === "UPDATE_QUANTITY") {
-        if (+data.quantity > stock) {
-          return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
-    //     } else {
-    //       cart.quantity = +data.quantity;
-    //       await cart.save();
-    //     }
-    //   } else {
-    //     if (+cart.quantity + +data.quantity > stock) {
-    //       return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
-    //     } else {
-    //       cart.quantity += +data.quantity;
-    //       await cart.save();
-    //     }
-    //   }
+    if (+data.quantity > stock) {
+      return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
     } else {
-      if (data.quantity > stock) {
-        return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
-      } else {
-        await db.ShopCart.create({
-          userId: data.userId,
-          sizeId: data.sizeId,
-          quantity: data.quantity,
-          statusId: 0,
-        });
-      }
+      await db.ShopCart.create({
+        userId: data.userId,
+        sizeId: data.sizeId,
+        quantity: data.quantity,
+        statusId: 0,
+      });
+      return successResponse("Add items into shop cart");
     }
-    return successResponse("Add items into shop cart");
   } catch (error) {
     console.error("Error in addShopCart:", error);
     return errorResponse(error.message);

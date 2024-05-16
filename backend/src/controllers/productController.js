@@ -101,7 +101,7 @@ const updateProductDetail = async (req, res) => {
 
 const deleteProductDetail = async (req, res) => {
   try {
-    const data = await productService.deleteProductDetail(req.query.id);
+    const data = await productService.deleteProductDetail(req.query);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);

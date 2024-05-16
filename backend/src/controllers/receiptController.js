@@ -11,16 +11,6 @@ const createReceipt = async (req, res) => {
   }
 };
 
-const createReceiptDetail = async (req, res) => {
-  try {
-    const data = await receiptService.createReceiptDetail(req.body);
-    return res.status(200).json(data);
-  } catch (error) {
-    console.error("Error in createReceiptDetail:", error);
-    return res.status(500).json(errorResponse("Error from server"));
-  }
-};
-
 const getReceiptById = async (req, res) => {
   try {
     const data = await receiptService.getReceiptById(req.query.id);
@@ -63,7 +53,6 @@ const deleteReceipt = async (req, res) => {
 
 module.exports = {
   createReceipt,
-  createReceiptDetail,
   getReceiptById,
   getAllReceipt,
   updateReceipt,

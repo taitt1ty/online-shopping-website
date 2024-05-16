@@ -23,7 +23,7 @@ const getAllOrders = async (req, res) => {
 
 const getOrderById = async (req, res) => {
   try {
-    const data = await orderService.getOrderById(req.query.id);
+    const data = await orderService.getOrderById(req.query);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);

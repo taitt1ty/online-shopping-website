@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
 import db from "../models/index";
-import paypal from "paypal-rest-sdk";
 const { Op } = require("sequelize");
 var querystring = require("qs");
 var crypto = require("crypto");
@@ -14,57 +13,102 @@ import {
 
 const createOrder = async (data) => {
   try {
-    if (!data.addressUserId || !data.typeShipId) {
-      return missingRequiredParams("addressUserId and typeShipId");
+    if (
+      !data.addressUserId ||
+      !data.typeShipId ||
+      !data.userId ||
+      !data.arrDataShopCart ||
+      data.arrDataShopCart.length === 0
+    ) {
+      return missingRequiredParams(
+        "addressUserId, typeShipId, userId, and arrDataShopCart"
+      );
     }
-    const product = await db.Order.create({
+
+    // Tạo đơn hàng
+    const order = await db.Order.create({
       addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline,
+      isPaymentOnline: data.isPaymentOnline || 0,
       statusId: "S3",
       typeShipId: data.typeShipId,
-      voucherId: data.voucherId,
-      note: data.note,
+      note: data.note || "",
     });
 
-    // Update orderId for products in shop cart
-    const updatedShopCart = data.arrDataShopCart.map((item) => ({
-      ...item,
-      orderId: product.id,
-    }));
-
-    // Add order detail
-    await db.OrderDetail.bulkCreate(updatedShopCart);
-
-    // Delete ordered products from the shopping cart
-    const shopCartItems = await db.ShopCart.findAll({
-      where: { userId: data.userId, statusId: 0 },
-    });
-    if (shopCartItems.length > 0) {
-      await db.ShopCart.destroy({ where: { userId: data.userId } });
-      // Update product inventory quantity
-      for (const cartItem of updatedShopCart) {
-        const productSize = await db.productSize.findByPk(cartItem.productId);
-        if (productSize) {
-          productSize.stock -= cartItem.quantity;
-          await productSize.save();
-        }
-      }
-    }
-
-    // Voucher code used
-    if (data.voucherId && data.userId) {
-      const voucherUse = await db.VoucherUsed.findOne({
-        where: { voucherId: data.voucherId, userId: data.userId },
+    // Thêm chi tiết đơn hàng từ shop cart
+    const orderDetails = [];
+    for (const item of data.arrDataShopCart) {
+      const productDetail = await db.ProductDetail.findOne({
+        where: { productId: item.productId },
       });
-      if (voucherUse) {
-        voucherUse.status = 1;
-        await voucherUse.save();
+
+      if (productDetail) {
+        orderDetails.push({
+          orderId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          // Lấy giá thực tế từ productDetail và tính toán giá cuối cùng
+          realPrice:
+            item.quantity *
+            (productDetail.discountPrice || productDetail.originalPrice),
+        });
+      } else {
+        console.error(
+          `Product detail not found for productId: ${item.productId}`
+        );
+        // Xử lý lỗi nếu cần
       }
     }
-    return successResponse("Order created");
+
+    // Tạo các chi tiết đơn hàng
+    await db.OrderDetail.bulkCreate(orderDetails);
+
+    // Xóa sản phẩm đã đặt khỏi shop cart
+    await db.ShopCart.destroy({ where: { userId: data.userId, statusId: 0 } });
+
+    // Cập nhật số lượng tồn kho của sản phẩm
+    for (const cartItem of data.arrDataShopCart) {
+      const productSize = await db.ProductSize.findByPk(cartItem.productId);
+      if (productSize) {
+        await db.ProductSize.update(
+          { stock: productSize.stock - cartItem.quantity },
+          { where: { productId: cartItem.productId } }
+        );
+      }
+    }
+
+    return successResponse("Order created", { orderId: order.id });
   } catch (error) {
-    console.error("Error in create order:", error);
+    console.error("Error in createOrder:", error);
     return errorResponse("Error from server");
+  }
+};
+
+const confirmOrder = async (data) => {
+  try {
+    if (!data.orderId || !data.statusId) {
+      return missingRequiredParams("orderId and statusId");
+    }
+
+    const order = await db.Order.findOne({
+      where: { id: data.orderId },
+      raw: false,
+    });
+
+    if (!order) {
+      return notFound(`Order with id ${data.orderId}`);
+    }
+
+    order.statusId = data.statusId;
+
+    if (data.statusId === "S6" && data.isPaymentOnline) {
+      order.isPaymentOnline = 0;
+    }
+
+    await order.save();
+    return successResponse("Confirm order");
+  } catch (error) {
+    console.error("Error in confirmOrder:", error);
+    return errorResponse(error.message);
   }
 };
 
@@ -73,7 +117,6 @@ const getAllOrders = async (data) => {
     let objectFilter = {
       include: [
         { model: db.TypeShip, as: "typeShipData" },
-        { model: db.Voucher, as: "voucherData" },
         { model: db.AllCode, as: "statusOrderData" },
       ],
       order: [["createdAt", "DESC"]],
@@ -95,108 +138,117 @@ const getAllOrders = async (data) => {
         errors: ["No orders found!"],
       };
     }
-    for (let i = 0; i < rows.length; i++) {
-      let [addressUser, shipper] = await Promise.all([
-        db.AddressUser.findOne({ where: { id: rows[i].addressUserId } }),
-        db.User.findOne({ where: { id: rows[i].shipperId } }),
-      ]);
 
-      if (addressUser) {
-        let user = await db.User.findOne({ where: { id: addressUser.userId } });
-        rows[i].userData = user;
-        rows[i].addressUser = addressUser;
-        rows[i].shipperData = shipper;
-      }
-    }
+    // Chuyển đổi dữ liệu để trả về theo định dạng mong muốn
+    const formattedRows = rows.map((row) => {
+      const addressUser = row.addressUserData || {};
+      const status = (row.statusOrderData && row.statusOrderData.value) || "";
+      const typeShip = row.typeShipData || {};
+
+      return {
+        id: row.id,
+        addressUser: {
+          userId: addressUser.userId || null,
+          shipName: addressUser.shipName || "",
+          shipAddress: addressUser.shipAddress || "",
+          shipEmail: addressUser.shipEmail || "",
+          shipPhoneNumber: addressUser.shipPhoneNumber || "",
+        },
+        status,
+        typeShip: {
+          type: typeShip.type || "",
+          price: typeShip.price || 0,
+        },
+        note: row.note || "",
+        isPaymentOnline: row.isPaymentOnline || 0,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+    });
+
     return {
-      result: rows,
-      statusCode: 0,
-      errors: ["Retrieved all order successfully!"],
+      result: formattedRows,
+      statusCode: 200,
+      errors: ["Success!"],
     };
   } catch (error) {
-    console.error("Error in get all order:", error);
-    return errorResponse("Error from server");
+    console.error("Error:", error);
+    return errorResponse(error.message);
   }
 };
 
-const getOrderById = async (id) => {
+const getOrderById = async (data) => {
   try {
-    if (!id) {
-      return missingRequiredParams("Id");
+    if (!data.id) {
+      return missingRequiredParams("id");
     }
-    const processImage = async (link) => {
-      return link;
-    };
-    const order = await db.Order.findOne({
-      where: { id: id },
+
+    let order = await db.Order.findOne({
+      where: { id: data.id },
       include: [
         { model: db.TypeShip, as: "typeShipData" },
-        { model: db.Voucher, as: "voucherData" },
         { model: db.AllCode, as: "statusOrderData" },
       ],
       raw: true,
       nest: true,
     });
+
     if (!order) {
-      return notFound(`Order with id ${id}`);
+      return notFound(`Order with id ${data.id}`);
     }
-    const addressUser = await db.AddressUser.findOne({
+
+    let addressUser = await db.AddressUser.findOne({
       where: { id: order.addressUserId },
     });
+
     if (!addressUser) {
-      return notFound(`addressUser for order  with id ${addressUser.id}`);
+      return notFound(`AddressUser for order with id ${data.id}`);
     }
-    const user = await db.User.findOne({
-      where: { id: addressUser.userId },
-      attributes: { exclude: ["password", "image"] },
+
+    let user = await db.User.findOne({ where: { id: addressUser.userId } });
+
+    if (!user) {
+      return notFound(`User for AddressUser with id ${addressUser.id}`);
+    }
+
+    let orderDetails = await db.OrderDetail.findAll({
+      where: { orderId: order.id },
       raw: true,
       nest: true,
     });
-    if (!user) {
-      return notFound(`User for addressUser with id ${addressUser.id}.`);
+
+    // Lặp qua mỗi order detail và lấy thông tin sản phẩm cho từng chi tiết đơn hàng
+    for (let i = 0; i < orderDetails.length; i++) {
+      let productData = await db.Product.findOne({
+        where: { id: orderDetails[i].productId },
+      });
+
+      orderDetails[i].productData = productData;
     }
-    if (order.image) {
-      order.image = await processImage(order.image);
-    }
-    order.voucherData.typeVoucherOfVoucherData = await db.TypeVoucher.findOne({
-      where: { id: order.voucherData.typeVoucherId },
-    });
-    const orderDetail = await db.OrderDetail.findAll({
-      where: { orderId: id },
-    });
-    for (let i = 0; i < orderDetail.length; i++) {
-      const productSize = await db.ProductSize.findOne({
-        where: { id: orderDetail[i].productId },
-        include: [{ model: db.AllCode, as: "sizeData" }],
-        raw: true,
-        nest: true,
-      });
-      orderDetail[i].productSize = productSize;
-      orderDetail[i].productDetail = await db.ProductDetail.findOne({
-        where: { id: productSize.productDetailId },
-      });
-      orderDetail[i].product = await db.Product.findOne({
-        where: { id: orderDetail[i].productDetail.productId },
-      });
-      const productImages = await db.ProductImage.findAll({
-        where: { productDetailId: orderDetail[i].productDetail.id },
-      });
-      for (let j = 0; j < productImages.length; j++) {
-        if (productImages[j].image) {
-          productImages[j].image = await processImage(productImages[j].image);
-        }
-      }
-      orderDetail[i].productImage = productImages;
-    }
-    order.orderDetail = orderDetail;
-    order.addressUser = addressUser;
-    order.userData = user;
+    let result = {
+      orderId: order.id,
+      addressUser: {
+        userId: addressUser.userId,
+        shipName: addressUser.shipName,
+        shipAddress: addressUser.shipAddress,
+        shipEmail: addressUser.shipEmail,
+        shipPhoneNumber: addressUser.shipPhoneNumber,
+      },
+      status: order.statusOrderData.value,
+      typeShip: order.typeShipData.type,
+      note: order.note,
+      isPaymentOnline: order.isPaymentOnline,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+
     return {
-      result: [order],
+      result: result,
       statusCode: 200,
-      errors: [`Retrieved order ${id} successfully!`],
+      errors: ["Success!"],
     };
   } catch (error) {
+    console.error("Error:", error);
     return errorResponse(error.message);
   }
 };
@@ -254,43 +306,39 @@ const getAllOrdersByUser = async (userId) => {
       const orders = await db.Order.findAll({
         where: { addressUserId: addressUsers[i].id },
         include: [
-          { model: db.TypeShip, as: "typeShipData" },
-          { model: db.Voucher, as: "voucherData" },
           { model: db.AllCode, as: "statusOrderData" },
+          { model: db.TypeShip, as: "typeShipData" },
         ],
         raw: true,
         nest: true,
       });
       for (let j = 0; j < orders.length; j++) {
-        orders[j].voucherData.typeVoucherOfVoucherData =
-          await db.TypeVoucher.findOne({
-            where: { id: orders[j].voucherData.typeVoucherId },
-          });
         const orderDetail = await db.OrderDetail.findAll({
           where: { orderId: orders[j].id },
         });
-        for (let k = 0; k < orderDetail.length; k++) {
-          const productSize = await db.ProductSize.findOne({
-            where: { id: orderDetail[k].productId },
-            include: [{ model: db.AllCode, as: "sizeData" }],
-            raw: true,
-            nest: true,
-          });
-          orderDetail[k].productSize = productSize;
-          orderDetail[k].productDetail = await db.ProductDetail.findOne({
-            where: { id: productSize.productDetailId },
-          });
-          orderDetail[k].product = await db.Product.findOne({
-            where: { id: orderDetail[k].productDetail.productId },
-          });
-          const productImages = await db.ProductImage.findAll({
-            where: { productDetailId: orderDetail[k].productDetail.id },
-          });
-          orderDetail[k].productImage = productImages;
-        }
-        orders[j].orderDetail = orderDetail;
+        const totalPrice = orderDetail.reduce(
+          (acc, curr) => acc + curr.price,
+          0
+        );
+        const quantity = orderDetail.reduce(
+          (acc, curr) => acc + curr.quantity,
+          0
+        );
+
+        const formattedOrder = {
+          id: orders[j].id,
+          status: orders[j].statusOrderData.value,
+          typeShip: orders[j].typeShipData.value,
+          totalPrice: totalPrice,
+          quantity: quantity,
+          isPaymentOnline: orders[j].isPaymentOnline,
+          image: orders[j].image,
+          createdAt: orders[j].createdAt,
+          updatedAt: orders[j].updatedAt,
+        };
+
+        result.push(formattedOrder);
       }
-      result.push({ addressUser: addressUsers[i], orders: orders });
     }
     return {
       result: result,
@@ -368,28 +416,17 @@ const confirmOrderVNPay = async (data) => {
   try {
     var vnp_Params = data;
     var secureHash = vnp_Params["vnp_SecureHash"];
-    console.log("secureHash", secureHash);
     delete vnp_Params["vnp_SecureHash"];
     delete vnp_Params["vnp_SecureHashType"];
     vnp_Params = sortObject(vnp_Params);
-    var tmnCode = process.env.VNP_TMNCODE;
     var secretKey = process.env.VNP_HASHSECRET;
     var signData = querystring.stringify(vnp_Params, { encode: false });
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-    console.log("signed", signed);
     if (secureHash === signed) {
-      return {
-        result: [],
-        statusCode: 0,
-        errors: ["Confirm payment by VNPay successfully!"],
-      };
+      return successResponse("Confirm payment by VNPay");
     } else {
-      return {
-        result: [],
-        statusCode: 1,
-        errors: ["Failed payment by VNPay"],
-      };
+      return errorResponse("Failed payment by VNPay");
     }
   } catch (error) {
     console.error("Error:", error);
@@ -399,68 +436,41 @@ const confirmOrderVNPay = async (data) => {
 
 const paymentOrderVNPaySuccess = async (data) => {
   try {
-    let product = await db.Order.create({
+    const order = await db.Order.create({
       addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline,
+      isPaymentOnline: data.isPaymentOnline ? 1 : 0,
       statusId: "S3",
       typeShipId: data.typeShipId,
-      voucherId: data.voucherId,
       note: data.note,
     });
-    data.arrDataShopCart = data.arrDataShopCart.map((item, index) => {
-      item.orderId = product.dataValues.id;
-      return item;
-    });
-    await db.OrderDetail.bulkCreate(data.arrDataShopCart);
-    let res = await db.ShopCart.findOne({
+
+    const updatedShopCart = data.arrDataShopCart.map((item) => ({
+      ...item,
+      orderId: order.id,
+    }));
+
+    await db.OrderDetail.bulkCreate(updatedShopCart);
+
+    await db.ShopCart.destroy({
       where: { userId: data.userId, statusId: 0 },
     });
-    if (res) {
-      await db.ShopCart.destroy({
-        where: { userId: data.userId },
+
+    for (const cartItem of updatedShopCart) {
+      const productDetailSize = await db.ProductSize.findOne({
+        where: { id: cartItem.productId },
+        raw: false,
       });
-      for (let i = 0; i < data.arrDataShopCart.length; i++) {
-        let productDetailSize = await db.ProductDetailSize.findOne({
-          where: { id: data.arrDataShopCart[i].productId },
-          raw: false,
-        });
-        productDetailSize.stock =
-          productDetailSize.stock - data.arrDataShopCart[i].quantity;
+      if (productDetailSize) {
+        productDetailSize.stock -= cartItem.quantity;
         await productDetailSize.save();
       }
     }
-    if (data.voucherId && data.userId) {
-      let voucherUses = await db.VoucherUsed.findOne({
-        where: {
-          voucherId: data.voucherId,
-          userId: data.userId,
-        },
-        raw: false,
-      });
-      voucherUses.status = 1;
-      await voucherUses.save();
-    }
-    return successResponse("Payment by VNPay");
+
+    return successResponse("Payment by VNPay processed", {
+      orderId: order.id,
+    });
   } catch (error) {
     console.error("Error:", error);
-    return errorResponse(error.message);
-  }
-};
-
-const confirmOrder = async (data) => {
-  try {
-    if (!data.orderId || !data.statusId) {
-      return missingRequiredParams("orderId, statusId are");
-    }
-    const Order = await db.Order.findOne({
-      where: { id: data.orderId },
-      raw: false,
-    });
-    Order.statusId = data.statusId;
-    await Order.save();
-    return successResponse("Confirm");
-  } catch (error) {
-    console.log("Errors", error);
     return errorResponse(error.message);
   }
 };
