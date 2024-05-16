@@ -21,7 +21,7 @@ const calculateStock = async (sizeId, orderDetails) => {
     // Subtract quantities from orders if orderDetails exist
     if (Array.isArray(orderDetails)) {
       for (const order of orderDetails) {
-        if (order && order.statusId !== "S7" && order.sizeId === sizeId) {
+        if (order && order.statusId !== "S7" && order.sizeId === sizeId) { // S7: hủy đơn
           totalQuantity -= order.quantity;
         }
       }

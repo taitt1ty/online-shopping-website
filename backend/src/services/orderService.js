@@ -28,8 +28,8 @@ const createOrder = async (data) => {
     // Tạo đơn hàng
     const order = await db.Order.create({
       addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline || 0,
-      statusId: "S3",
+      isPaymentOnline: data.isPaymentOnline || 0, // Thanh toán Online hay COD
+      statusId: "S3", // Chờ xác nhận
       typeShipId: data.typeShipId,
       note: data.note || "",
     });
@@ -75,8 +75,17 @@ const createOrder = async (data) => {
         );
       }
     }
-
-    return successResponse("Order created", { orderId: order.id });
+    return {
+      result: [
+        {
+          orderId: order.id,
+          addressUserId: data.addressUserId,
+          productId: data.arrDataShopCart.map((item) => item.productId),
+        },
+      ],
+      statusCode: 200,
+      errors: [`Create order successfully!`],
+    };
   } catch (error) {
     console.error("Error in createOrder:", error);
     return errorResponse("Error from server");
@@ -101,6 +110,7 @@ const confirmOrder = async (data) => {
     order.statusId = data.statusId;
 
     if (data.statusId === "S6" && data.isPaymentOnline) {
+      // S6: đã giao hàng
       order.isPaymentOnline = 0;
     }
 
@@ -114,7 +124,7 @@ const confirmOrder = async (data) => {
 
 const getAllOrders = async (data) => {
   try {
-    let objectFilter = {
+    let orderFilter = {
       include: [
         { model: db.TypeShip, as: "typeShipData" },
         { model: db.AllCode, as: "statusOrderData" },
@@ -123,14 +133,17 @@ const getAllOrders = async (data) => {
       raw: true,
       nest: true,
     };
+
     if (data.limit && data.offset) {
-      objectFilter.limit = +data.limit;
-      objectFilter.offset = +data.offset;
+      orderFilter.limit = +data.limit;
+      orderFilter.offset = +data.offset;
     }
     if (data.statusId && data.statusId !== "ALL") {
-      objectFilter.where = { statusId: data.statusId };
+      orderFilter.where = { statusId: data.statusId };
     }
-    let { rows, count } = await db.Order.findAndCountAll(objectFilter);
+
+    let { rows, count } = await db.Order.findAndCountAll(orderFilter);
+
     if (rows.length === 0) {
       return {
         result: [],
@@ -139,14 +152,70 @@ const getAllOrders = async (data) => {
       };
     }
 
-    // Chuyển đổi dữ liệu để trả về theo định dạng mong muốn
-    const formattedRows = rows.map((row) => {
-      const addressUser = row.addressUserData || {};
-      const status = (row.statusOrderData && row.statusOrderData.value) || "";
-      const typeShip = row.typeShipData || {};
+    // Fetch addressUser information for orders
+    let addressUsers = await db.AddressUser.findAll({
+      where: { id: { [Op.in]: rows.map((order) => order.addressUserId) } },
+      raw: true,
+      nest: true,
+    });
+
+    // Fetch order details for the orders
+    let orderDetails = await db.OrderDetail.findAll({
+      where: { orderId: rows.map((order) => order.id) },
+      raw: true,
+      nest: true,
+    });
+
+    // Fetch product details for the order details
+    let productIds = orderDetails.map((detail) => detail.productId);
+    let productDetails = await db.ProductDetail.findAll({
+      where: { id: productIds },
+      include: [{ model: db.Product, as: "productData", raw: true }],
+      raw: true,
+      nest: true,
+    });
+
+    // Map addressUser information to orders
+    const addressUserMap = addressUsers.reduce((acc, addressUser) => {
+      acc[addressUser.id] = addressUser;
+      return acc;
+    }, {});
+
+    // Formatting code...
+    const formattedRows = rows.map((order) => {
+      const addressUser = addressUserMap[order.addressUserId] || {};
+      const statusOrder =
+        (order.statusOrderData && order.statusOrderData.value) || "";
+      const typeShip = order.typeShipData || {};
+
+      const orderDetailData = orderDetails.filter(
+        (detail) => detail.orderId === order.id
+      );
+      const products = orderDetailData.map((detail) => {
+        const productDetail = productDetails.find(
+          (product) => product.id === detail.productId
+        );
+        const product = productDetail.productData || {};
+
+        const quantity = detail.quantity || 0;
+        const realPrice = detail.realPrice || 0;
+        return {
+          productName: product.name || "",
+          quantity,
+          priceProduct: realPrice,
+          color: productDetail.color || "",
+        };
+      });
+
+      // Calculate totalPrice for the order
+      const totalPrice =
+        products.reduce(
+          (acc, product) => acc + product.quantity * product.priceProduct,
+          0
+        ) + (typeShip.price || 0);
 
       return {
-        id: row.id,
+        id: order.id,
         addressUser: {
           userId: addressUser.userId || null,
           shipName: addressUser.shipName || "",
@@ -154,26 +223,32 @@ const getAllOrders = async (data) => {
           shipEmail: addressUser.shipEmail || "",
           shipPhoneNumber: addressUser.shipPhoneNumber || "",
         },
-        status,
+        statusOrder,
         typeShip: {
           type: typeShip.type || "",
           price: typeShip.price || 0,
         },
-        note: row.note || "",
-        isPaymentOnline: row.isPaymentOnline || 0,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
+        note: order.note || "",
+        isPaymentOnline: order.isPaymentOnline || 0,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        products: products,
+        totalPrice: totalPrice,
       };
     });
 
     return {
       result: formattedRows,
       statusCode: 200,
-      errors: ["Success!"],
+      errors: ["Get all order successfully!"],
     };
   } catch (error) {
     console.error("Error:", error);
-    return errorResponse(error.message);
+    return {
+      result: [],
+      statusCode: 500,
+      errors: [error.message],
+    };
   }
 };
 
@@ -268,7 +343,7 @@ const updateStatusOrder = async (data) => {
     }
     console.log("Updated rows:", updatedRows);
     if (
-      statusId === "S7" &&
+      statusId === "S7" && //S7: hủy đơn
       dataOrder &&
       dataOrder.orderDetail &&
       dataOrder.orderDetail.length > 0
@@ -438,8 +513,8 @@ const paymentOrderVNPaySuccess = async (data) => {
   try {
     const order = await db.Order.create({
       addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline ? 1 : 0,
-      statusId: "S3",
+      isPaymentOnline: data.isPaymentOnline ? 1 : 0, // thanh toán online hay COD
+      statusId: "S3", // Chờ xác nhận
       typeShipId: data.typeShipId,
       note: data.note,
     });

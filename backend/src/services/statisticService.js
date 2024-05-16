@@ -28,7 +28,7 @@ const getCountCardStatistic = async () => {
     // });
     let countOrder = await db.Order.count({
       where: {
-        statusId: { [Op.ne]: "S7" },
+        statusId: { [Op.ne]: "S7" }, // S7: hủy đơn
       },
     });
     let data = {
@@ -140,7 +140,7 @@ const getStatisticByMonth = async (data) => {
       return missingRequiredParams();
     } else {
       const orders = await db.Order.findAll({
-        where: { statusId: "S6" },
+        where: { statusId: "S6" }, // S6: đã giao hàng
         include: [
           { model: db.TypeShip, as: "typeShipData" },
           { model: db.Voucher, as: "voucherData" },
@@ -202,7 +202,7 @@ const getStatisticByDay = async (data) => {
       const day = DaysOfMonth(data.month, data.year);
 
       const orderProducts = await db.Order.findAll({
-        where: { statusId: "S6" },
+        where: { statusId: "S6" }, // S6: đã giao hàng
         include: [
           { model: db.TypeShip, as: "typeShipData" },
           { model: db.Voucher, as: "voucherData" },
@@ -270,7 +270,7 @@ const getStatisticProfit = async (data) => {
       return errorResponse();
     }
     let orderProducts = await db.Order.findAll({
-      where: { statusId: "S6" },
+      where: { statusId: "S6" }, // S6: đã giao hàng
       include: [
         { model: db.TypeShip, as: "typeShipData" },
         {
@@ -350,7 +350,7 @@ const getStatisticOverturn = async (data) => {
     }
 
     let orderProducts = await db.Order.findAll({
-      where: { statusId: "S6" },
+      where: { statusId: "S6" }, // Đã giao hàng
       include: [
         { model: db.TypeShip, as: "typeShipData" },
         { model: db.Voucher, as: "voucherData" },
@@ -436,7 +436,7 @@ const getStatisticStockProduct = async (data) => {
           where: { id: orderDetail.orderId },
           attributes: ["statusId"],
         });
-        if (order && order.statusId !== "S7") {
+        if (order && order.statusId !== "S7") { // S7: hủy đơn
           quantity -= orderDetail.quantity;
         }
       }

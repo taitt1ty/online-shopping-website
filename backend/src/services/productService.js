@@ -830,7 +830,7 @@ const getAllProductSize = async (data) => {
         const order = await db.Order.findOne({
           where: { id: orderDetail[k].orderId },
         });
-        if (order.statusId != "S7") {
+        if (order.statusId != "S7") { //S7: hủy đơn
           quantity -= orderDetail[k].quantity;
         }
       }

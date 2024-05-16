@@ -13,10 +13,9 @@ module.exports = (sequelize, DataTypes) => {
         targetKey: "id",
         as: "typeShipData",
       });
-      Order.belongsTo(models.Voucher, {
-        foreignKey: "voucherId",
-        targetKey: "id",
-        as: "voucherData",
+      Order.hasMany(models.OrderDetail, {
+        foreignKey: "orderId",
+        as: "orderDetailData",
       });
       Order.belongsTo(models.AllCode, {
         foreignKey: "statusId",
