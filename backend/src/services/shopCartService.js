@@ -59,20 +59,91 @@ const addShopCart = async (data, orderDetails) => {
   }
 };
 
+// const getShopCartByUserId = async (userId) => {
+//   try {
+//     if (!userId) {
+//       return errorResponse("Missing required parameter userId!");
+//     }
+//     const shopCartItems = await db.ShopCart.findAll({
+//       where: { userId: userId, statusId: 0 },
+//       raw: true,
+//     });
+//     if (!shopCartItems || shopCartItems.length === 0) {
+//       return errorResponse("No shop cart items found for the user!");
+//     }
+//     const data = [];
+//     for (const item of shopCartItems) {
+//       const productDetail = await db.ProductDetail.findOne({
+//         where: { id: item.sizeId },
+//         include: [
+//           {
+//             model: db.Product,
+//             as: "productData",
+//             attributes: ["name"],
+//           },
+//           {
+//             model: db.ProductImage,
+//             as: "productImageData",
+//             attributes: ["image"],
+//           },
+//           { model: db.ProductSize, as: "sizeData", attributes: ["sizeId"] },
+//         ],
+//         raw: true,
+//       });
+
+//       if (!productDetail) {
+//         continue;
+//       }
+//       const productImages = productDetail.productImageData;
+//       if (productImages) {
+//         const productImages = productImages.map(
+//           (productImage) => productImage.image
+//         );
+//       }
+//       data.push({
+//         id: item.id,
+//         userId: item.userId,
+//         sizeId: item.sizeId,
+//         sideData: productDetail["sizeData.sizeId"],
+//         quantity: item.quantity,
+//         productId: productDetail.productId,
+//         name: productDetail["productData.name"],
+//         image: productDetail["productImageData.image"],
+//         color: productDetail.color,
+//         originalPrice: productDetail.originalPrice,
+//         discountPrice: productDetail.discountPrice,
+//       });
+//     }
+//     return {
+//       result: data,
+//       statusCode: 200,
+//       errors: [`Get items with userId = ${userId} successfully!`],
+//     };
+//   } catch (error) {
+//     console.error("Error in getShopCartByUserId:", error);
+//     return errorResponse(error.message);
+//   }
+// };
+
 const getShopCartByUserId = async (userId) => {
   try {
     if (!userId) {
-      return errorResponse("Missing required parameter userId!");
+      missingRequiredParams("userId");
     }
+
     const shopCartItems = await db.ShopCart.findAll({
       where: { userId: userId, statusId: 0 },
       raw: true,
     });
+
     if (!shopCartItems || shopCartItems.length === 0) {
-      return errorResponse("No shop cart items found for the user!");
+      return {
+        result: [],
+        statusCode: 404,
+        errors: [`No shop cart items found for the user with userId ${userId}`],
+      };
     }
-    const data = [];
-    for (const item of shopCartItems) {
+    const productDetailPromises = shopCartItems.map(async (item) => {
       const productDetail = await db.ProductDetail.findOne({
         where: { id: item.sizeId },
         include: [
@@ -90,17 +161,18 @@ const getShopCartByUserId = async (userId) => {
         ],
         raw: true,
       });
+      return productDetail;
+    });
 
+    const productDetails = await Promise.all(productDetailPromises);
+
+    const data = shopCartItems.map((item, index) => {
+      const productDetail = productDetails[index];
       if (!productDetail) {
-        continue;
+        return null;
       }
-      const productImages = productDetail.productImageData;
-      if (productImages) {
-        const productImages = productImages.map(
-          (productImage) => productImage.image
-        );
-      }
-      data.push({
+
+      return {
         id: item.id,
         userId: item.userId,
         sizeId: item.sizeId,
@@ -112,12 +184,13 @@ const getShopCartByUserId = async (userId) => {
         color: productDetail.color,
         originalPrice: productDetail.originalPrice,
         discountPrice: productDetail.discountPrice,
-      });
-    }
+      };
+    });
+
     return {
-      result: data,
+      result: data.filter((item) => item !== null),
       statusCode: 200,
-      errors: [`Get items with userId = ${userId} successfully!`],
+      errors: [`Get shop cart of user with id = ${userId} successfully!`],
     };
   } catch (error) {
     console.error("Error in getShopCartByUserId:", error);
