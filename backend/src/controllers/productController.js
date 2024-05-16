@@ -21,9 +21,25 @@ const handleRequest = async (handler, req, res) => {
   }
 };
 
+const handleRequestProduct = async (handler, req, res) => {
+  try {
+    const data = await handler({...req.body, files: req.files});
+    if (!data) {
+      return res
+        .status(500)
+        .json(errorResponse("Failed to process the request"));
+    }
+    const statusCode = data.statusCode || 200;
+    return res.status(statusCode).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Internal server error"));
+  }
+};
+
 // PRODUCT
 const createProduct = async (req, res) => {
-  await handleRequest(productService.createProduct, req, res);
+  await handleRequestProduct(productService.createProduct, req, res);
 };
 
 const getAllProductAdmin = async (req, res) => {

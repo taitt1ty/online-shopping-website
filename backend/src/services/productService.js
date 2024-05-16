@@ -49,10 +49,11 @@ const createProduct = async (data) => {
       return missingRequiredParams("Category, Brand are");
     }
     // Create product
+    const arrayColor = JSON.parse(data.color);
     const product = await db.Product.create({
       name: data.name,
       content: data.content,
-      statusId: "S1",
+      statusId: data.statusId,
       categoryId: data.categoryId,
       brandId: data.brandId,
     });
@@ -61,28 +62,42 @@ const createProduct = async (data) => {
       return errorResponse(error.message);
     }
     // Create product detail
-    const productDetail = await db.ProductDetail.create({
-      productId: product.id,
-      color: data.color,
-      originalPrice: data.originalPrice,
-      discountPrice: data.discountPrice,
-    });
+    const productDetails = [];
+
+    for (const color of arrayColor) {
+      try {
+        const productDetail = await db.ProductDetail.create({
+          productId: product.id,
+          color: color,
+          originalPrice: data.originalPrice,
+          discountPrice: data.discountPrice,
+        });
+        productDetails.push(productDetail);
+      } catch (error) {
+        console.error("Error creating product detail:", error);
+      }
+    }
     // Check if product detail creation was successful
-    if (!productDetail) {
+    if (!productDetails) {
       return errorResponse(error.message);
     }
-    // Create product image
-    await db.ProductImage.create({
-      productDetailId: productDetail.id,
-      image: data.image,
-    });
-    // Create product detail size
-    await db.ProductSize.create({
-      productDetailId: productDetail.id,
-      height: data.height,
-      weight: data.weight,
-      sizeId: data.sizeId,
-    });
+
+    for (const productDetail of productDetails) {
+      try {
+        await db.ProductSize.create({
+          productDetailId: productDetail.id,
+          height: data.height,
+          weight: data.weight,
+          sizeId: data.sizeId,
+        });
+      } catch (error) {
+        console.error("Error creating product detail:", error);
+      }
+    }
+
+    const imagePaths = await uploadFiles(data.files);
+    await saveProductImages(product.id, imagePaths);
+
     return successResponse("Product created");
   } catch (error) {
     console.error("Error creating product:", error);
@@ -569,24 +584,32 @@ const deleteProductDetail = async (data) => {
     if (!data.id) {
       return missingRequiredParams("id is");
     }
-    let productDetail = await db.ProductDetail.findOne({
-      where: { id: data.id },
+    let productDetails = await db.ProductDetail.findAll({
+      where: { productId: data.id },
     });
-    if (productDetail) {
+    if (productDetails.length > 0) {
       await db.ProductDetail.destroy({
-        where: { id: data.id },
+        where: { productId: data.id },
       });
-      let productImg = await db.ProductImage.findOne({
+      let productImgs = await db.ProductImage.findAll({
         where: { productDetailId: data.id },
       });
-      if (productImg) {
+      if (productImgs.length > 0) {
         await db.ProductImage.destroy({
           where: { productDetailId: data.id },
         });
       }
+      let product = await db.Product.findOne({
+        where: { id: data.id },
+      });
+      if (product) {
+        await db.Product.destroy({
+          where: { id: data.id },
+        });
+      }
       return successResponse("Product detail deleted");
     } else {
-      return notValid(error.message);
+      return notValid("No product detail found");
     }
   } catch (error) {
     return errorResponse(error.message);
@@ -635,8 +658,8 @@ const uploadFiles = async (files) => {
   }
 
   const fileUploadPromises = files.map(async (file) => {
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `${Date.now()}${fileExtension}`;
+    const now = new Date()
+    const fileName = `${now.getTime()}_${file.originalname}`;
     const filePath = path.join(uploadDirectory, fileName);
 
     await fs.rename(file.path, filePath);
